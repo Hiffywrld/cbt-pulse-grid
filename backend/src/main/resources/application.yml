@@ -19,6 +19,17 @@ spring:
   flyway:
     enabled: true
 
+app:
+  jwt:
+    issuer: ${JWT_ISSUER:cbt-pulse-grid}
+    access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:15m}
+    refresh-token-expiry: ${JWT_REFRESH_TOKEN_EXPIRY:7d}
+    secret: ${JWT_SECRET:cbt-pulse-grid-local-development-secret-2026}
+  bootstrap-admin:
+    enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
+    email: ${BOOTSTRAP_ADMIN_EMAIL:admin@cbtpulse.local}
+    password: "${BOOTSTRAP_ADMIN_PASSWORD:Admin123!}"
+
 management:
   endpoints:
     web:
