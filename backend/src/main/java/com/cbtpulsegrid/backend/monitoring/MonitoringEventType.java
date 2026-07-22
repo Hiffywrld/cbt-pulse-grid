@@ -1,0 +1,12 @@
+package com.cbtpulsegrid.backend.monitoring;
+
+public enum MonitoringEventType {
+	TAB_HIDDEN,
+	WINDOW_BLUR,
+	FULLSCREEN_EXIT,
+	COPY_ATTEMPT,
+	PASTE_ATTEMPT,
+	DEVTOOLS_SUSPECTED,
+	NETWORK_DISCONNECTED,
+	NETWORK_RECONNECTED
+}
