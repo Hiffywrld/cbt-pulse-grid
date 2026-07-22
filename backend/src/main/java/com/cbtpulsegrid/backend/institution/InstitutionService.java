@@ -67,6 +67,14 @@ public class InstitutionService {
 		return toResponse(findInstitution(id));
 	}
 
+	@Transactional(readOnly = true)
+	public void requireActive(UUID id) {
+		Institution institution = findInstitution(id);
+		if (institution.getStatus() != InstitutionStatus.ACTIVE) {
+			throw new IllegalArgumentException("Institution must be ACTIVE");
+		}
+	}
+
 	@Transactional
 	public InstitutionResponse updateName(UUID id, String name) {
 		Institution institution = findInstitution(id);

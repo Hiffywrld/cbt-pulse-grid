@@ -43,10 +43,10 @@ public class User {
 	@Column(name = "institution_id")
 	private UUID institutionId;
 
-	@Column(name = "first_name", nullable = false, length = 80)
+	@Column(name = "first_name", nullable = false, length = 100)
 	private String firstName;
 
-	@Column(name = "last_name", nullable = false, length = 80)
+	@Column(name = "last_name", nullable = false, length = 100)
 	private String lastName;
 
 	@Column(name = "email", nullable = false, length = 254)
@@ -55,7 +55,7 @@ public class User {
 	@Column(name = "password_hash", nullable = false, length = 255)
 	private String passwordHash;
 
-	@Column(name = "registration_number", length = 64)
+	@Column(name = "registration_number", length = 100)
 	private String registrationNumber;
 
 	@Enumerated(EnumType.STRING)

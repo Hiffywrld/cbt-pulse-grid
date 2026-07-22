@@ -15,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class DevelopmentAdminInitializer implements ApplicationRunner {
 
+	private static final String ADMIN_FIRST_NAME = "System";
+	private static final String ADMIN_LAST_NAME = "Administrator";
+
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final BootstrapAdminProperties properties;
@@ -38,8 +41,8 @@ public class DevelopmentAdminInitializer implements ApplicationRunner {
 
 		String email = properties.email().trim().toLowerCase(Locale.ROOT);
 		User admin = new User(
-				"System",
-				"Administrator",
+				ADMIN_FIRST_NAME,
+				ADMIN_LAST_NAME,
 				email,
 				passwordEncoder.encode(properties.password()),
 				UserStatus.ACTIVE
