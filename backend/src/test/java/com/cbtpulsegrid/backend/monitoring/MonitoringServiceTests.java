@@ -26,6 +26,7 @@ import com.cbtpulsegrid.backend.monitoring.api.MonitoringActor;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringEventBatchRequest;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringEventRequest;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringUpdateType;
+import com.cbtpulsegrid.backend.monitoring.webhook.WebhookOutboxService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -85,6 +86,8 @@ class MonitoringServiceTests {
 	private ExaminationCandidateQuery candidateQuery;
 	@Mock
 	private MonitoringLiveUpdateNotifier liveUpdateNotifier;
+	@Mock
+	private WebhookOutboxService webhookOutboxService;
 
 	private MonitoringService monitoringService;
 
@@ -100,6 +103,7 @@ class MonitoringServiceTests {
 				candidateQuery,
 				new MonitoringAuthorization(),
 				liveUpdateNotifier,
+				webhookOutboxService,
 				Clock.fixed(NOW, ZoneOffset.UTC)
 		);
 	}

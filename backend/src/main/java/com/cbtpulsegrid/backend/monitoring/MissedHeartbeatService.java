@@ -8,6 +8,7 @@ import java.util.UUID;
 import com.cbtpulsegrid.backend.attempt.AttemptMonitoringQuery.AttemptView;
 import com.cbtpulsegrid.backend.attempt.AttemptStatus;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringUpdateType;
+import com.cbtpulsegrid.backend.monitoring.webhook.WebhookOutboxService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ class MissedHeartbeatService {
 	private final MonitoringStateRepository stateRepository;
 	private final MonitoringEventRepository eventRepository;
 	private final MonitoringLiveUpdateNotifier liveUpdateNotifier;
+	private final WebhookOutboxService webhookOutboxService;
 	private final MissedHeartbeatProperties properties;
 	private final Clock clock;
 
@@ -24,12 +26,14 @@ class MissedHeartbeatService {
 			MonitoringStateRepository stateRepository,
 			MonitoringEventRepository eventRepository,
 			MonitoringLiveUpdateNotifier liveUpdateNotifier,
+			WebhookOutboxService webhookOutboxService,
 			MissedHeartbeatProperties properties,
 			Clock clock
 	) {
 		this.stateRepository = stateRepository;
 		this.eventRepository = eventRepository;
 		this.liveUpdateNotifier = liveUpdateNotifier;
+		this.webhookOutboxService = webhookOutboxService;
 		this.properties = properties;
 		this.clock = clock;
 	}
@@ -50,7 +54,7 @@ class MissedHeartbeatService {
 			processed++;
 			int riskWeight = MonitoringRiskPolicy.weight(MonitoringEventType.HEARTBEAT_MISSED);
 			int riskApplied = state.recordEvent(riskWeight);
-			eventRepository.save(new MonitoringEvent(
+			MonitoringEvent missedEvent = eventRepository.save(new MonitoringEvent(
 					state.getInstitutionId(),
 					state.getExamId(),
 					state.getAttemptId(),
@@ -63,6 +67,7 @@ class MissedHeartbeatService {
 					riskWeight,
 					riskApplied
 			));
+			webhookOutboxService.enqueue(missedEvent, state.getRiskScore());
 			liveUpdateNotifier.publish(
 					new AttemptView(
 							state.getAttemptId(),

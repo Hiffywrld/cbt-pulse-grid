@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringUpdateType;
+import com.cbtpulsegrid.backend.monitoring.webhook.WebhookOutboxService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +39,8 @@ class MissedHeartbeatServiceTests {
 	private MonitoringEventRepository eventRepository;
 	@Mock
 	private MonitoringLiveUpdateNotifier liveUpdateNotifier;
+	@Mock
+	private WebhookOutboxService webhookOutboxService;
 
 	private MissedHeartbeatService service;
 
@@ -50,6 +53,8 @@ class MissedHeartbeatServiceTests {
 	void detectsTimeoutOnceAndRecordsZeroRiskMissedEvent() {
 		MonitoringState state = onlineState(NOW.minusSeconds(31));
 		when(stateRepository.findTimedOutForUpdate(CUTOFF, 100)).thenReturn(List.of(state));
+		when(eventRepository.save(any(MonitoringEvent.class)))
+				.thenAnswer(invocation -> invocation.getArgument(0));
 
 		assertEquals(1, service.detectMissedHeartbeats());
 
@@ -62,6 +67,7 @@ class MissedHeartbeatServiceTests {
 		assertEquals(MonitoringEventType.HEARTBEAT_MISSED, event.getValue().getEventType());
 		assertEquals(0, event.getValue().getRiskWeight());
 		assertEquals(0, event.getValue().getRiskPointsApplied());
+		verify(webhookOutboxService).enqueue(event.getValue(), 0);
 		verify(liveUpdateNotifier).publish(
 				any(),
 				eq(state),
@@ -132,6 +138,7 @@ class MissedHeartbeatServiceTests {
 				stateRepository,
 				eventRepository,
 				liveUpdateNotifier,
+				webhookOutboxService,
 				new MissedHeartbeatProperties(
 						Duration.ofSeconds(10),
 						Duration.ofSeconds(30),

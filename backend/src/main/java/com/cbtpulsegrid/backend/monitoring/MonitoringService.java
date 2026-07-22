@@ -29,6 +29,7 @@ import com.cbtpulsegrid.backend.monitoring.api.MonitoringEventRequest;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringEventResponse;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringPageResponse;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringUpdateType;
+import com.cbtpulsegrid.backend.monitoring.webhook.WebhookOutboxService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -60,6 +61,7 @@ public class MonitoringService {
 	private final ExaminationCandidateQuery candidateQuery;
 	private final MonitoringAuthorization authorization;
 	private final MonitoringLiveUpdateNotifier liveUpdateNotifier;
+	private final WebhookOutboxService webhookOutboxService;
 	private final Clock clock;
 
 	public MonitoringService(
@@ -72,6 +74,7 @@ public class MonitoringService {
 			ExaminationCandidateQuery candidateQuery,
 			MonitoringAuthorization authorization,
 			MonitoringLiveUpdateNotifier liveUpdateNotifier,
+			WebhookOutboxService webhookOutboxService,
 			Clock clock
 	) {
 		this.stateRepository = stateRepository;
@@ -83,6 +86,7 @@ public class MonitoringService {
 		this.candidateQuery = candidateQuery;
 		this.authorization = authorization;
 		this.liveUpdateNotifier = liveUpdateNotifier;
+		this.webhookOutboxService = webhookOutboxService;
 		this.clock = clock;
 	}
 
@@ -188,6 +192,7 @@ public class MonitoringService {
 				.filter(event -> !existingEventIds.contains(event.eventId()))
 				.toList();
 		List<MonitoringEvent> acceptedEvents = new java.util.ArrayList<>(acceptedRequests.size());
+		Map<MonitoringEvent, Integer> eventRiskTotals = new LinkedHashMap<>();
 		for (MonitoringEventRequest event : acceptedRequests) {
 			if (event.eventType() == MonitoringEventType.HEARTBEAT_MISSED) {
 				throw new IllegalArgumentException("HEARTBEAT_MISSED is generated only by the server");
@@ -196,7 +201,7 @@ public class MonitoringService {
 			int riskWeight = MonitoringRiskPolicy.weight(event.eventType());
 			int riskApplied = state.recordEvent(riskWeight);
 			applyConnectivityEvent(state, event);
-			acceptedEvents.add(new MonitoringEvent(
+			MonitoringEvent acceptedEvent = new MonitoringEvent(
 					institutionId,
 					attempt.examId(),
 					attemptId,
@@ -208,7 +213,9 @@ public class MonitoringService {
 					event.metadata(),
 					riskWeight,
 					riskApplied
-			));
+			);
+			acceptedEvents.add(acceptedEvent);
+			eventRiskTotals.put(acceptedEvent, state.getRiskScore());
 		}
 		if (!acceptedEvents.isEmpty()) {
 			eventRepository.saveAll(acceptedEvents);
@@ -221,6 +228,10 @@ public class MonitoringService {
 		));
 		stateRepository.saveAndFlush(state);
 		if (!acceptedEvents.isEmpty()) {
+			acceptedEvents.forEach(event -> webhookOutboxService.enqueue(
+					event,
+					eventRiskTotals.get(event)
+			));
 			liveUpdateNotifier.publish(
 					attempt,
 					state,

@@ -36,6 +36,18 @@ app:
       scan-interval: ${MONITORING_HEARTBEAT_SCAN_INTERVAL:10s}
       timeout: ${MONITORING_HEARTBEAT_TIMEOUT:30s}
       batch-size: ${MONITORING_HEARTBEAT_BATCH_SIZE:100}
+  webhooks:
+    enabled: ${WEBHOOK_ENABLED:false}
+    master-key: ${WEBHOOK_MASTER_KEY:}
+    allow-private-http: ${WEBHOOK_ALLOW_PRIVATE_HTTP:false}
+    connect-timeout: ${WEBHOOK_CONNECT_TIMEOUT:3s}
+    response-timeout: ${WEBHOOK_RESPONSE_TIMEOUT:5s}
+    scan-interval: ${WEBHOOK_SCAN_INTERVAL:5s}
+    lease-duration: ${WEBHOOK_LEASE_DURATION:30s}
+    initial-backoff: ${WEBHOOK_INITIAL_BACKOFF:10s}
+    maximum-backoff: ${WEBHOOK_MAXIMUM_BACKOFF:15m}
+    batch-size: ${WEBHOOK_BATCH_SIZE:25}
+    maximum-attempts: ${WEBHOOK_MAXIMUM_ATTEMPTS:8}
 
 springdoc:
   api-docs:
