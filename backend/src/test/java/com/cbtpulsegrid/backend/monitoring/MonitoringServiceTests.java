@@ -25,6 +25,7 @@ import com.cbtpulsegrid.backend.monitoring.api.HeartbeatRequest;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringActor;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringEventBatchRequest;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringEventRequest;
+import com.cbtpulsegrid.backend.monitoring.api.MonitoringUpdateType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -81,6 +83,8 @@ class MonitoringServiceTests {
 	private MonitoringExamQuery examQuery;
 	@Mock
 	private ExaminationCandidateQuery candidateQuery;
+	@Mock
+	private MonitoringLiveUpdateNotifier liveUpdateNotifier;
 
 	private MonitoringService monitoringService;
 
@@ -95,6 +99,7 @@ class MonitoringServiceTests {
 				examQuery,
 				candidateQuery,
 				new MonitoringAuthorization(),
+				liveUpdateNotifier,
 				Clock.fixed(NOW, ZoneOffset.UTC)
 		);
 	}
@@ -107,7 +112,7 @@ class MonitoringServiceTests {
 				ATTEMPT_ID,
 				"device-a"
 		)).thenReturn(attempt());
-		when(stateRepository.findByAttemptId(ATTEMPT_ID)).thenReturn(Optional.empty());
+		when(stateRepository.findByAttemptIdForUpdate(ATTEMPT_ID)).thenReturn(Optional.empty());
 		HeartbeatRequest request = heartbeat(1, "device-a", true, true, true);
 
 		var response = monitoringService.recordHeartbeat(STUDENT, ATTEMPT_ID, request);
@@ -118,6 +123,12 @@ class MonitoringServiceTests {
 		assertFalse(request.toString().contains("device-a"));
 		verify(heartbeatReceiptRepository).save(any(MonitoringHeartbeatReceipt.class));
 		verify(stateRepository).saveAndFlush(any(MonitoringState.class));
+		verify(liveUpdateNotifier).publish(
+				eq(attempt()),
+				any(MonitoringState.class),
+				eq(MonitoringUpdateType.HEARTBEAT),
+				eq(NOW)
+		);
 	}
 
 	@Test
@@ -131,7 +142,7 @@ class MonitoringServiceTests {
 				ATTEMPT_ID,
 				"device"
 		)).thenReturn(attempt());
-		when(stateRepository.findByAttemptId(ATTEMPT_ID)).thenReturn(Optional.of(state));
+		when(stateRepository.findByAttemptIdForUpdate(ATTEMPT_ID)).thenReturn(Optional.of(state));
 
 		var stale = monitoringService.recordHeartbeat(
 				STUDENT,
@@ -163,6 +174,45 @@ class MonitoringServiceTests {
 
 		assertFalse(duplicateResponse.applied());
 		assertEquals(10, duplicateResponse.clientSequence());
+		verify(liveUpdateNotifier, never()).publish(any(), any(), any(), any());
+	}
+
+	@Test
+	void validHeartbeatRestoresAHeartbeatOutageAndPublishesOneRecovery() {
+		MonitoringState state = state();
+		state.applyHeartbeat(
+				UUID.randomUUID(),
+				1,
+				NOW.minusSeconds(61),
+				NOW.minusSeconds(60),
+				true,
+				true,
+				true
+		);
+		state.markHeartbeatMissed(NOW.minusSeconds(30));
+		when(attemptQuery.requireOwnedActiveAttemptAndDevice(
+				INSTITUTION_ID,
+				CANDIDATE_ID,
+				ATTEMPT_ID,
+				"device"
+		)).thenReturn(attempt());
+		when(stateRepository.findByAttemptIdForUpdate(ATTEMPT_ID)).thenReturn(Optional.of(state));
+
+		var response = monitoringService.recordHeartbeat(
+				STUDENT,
+				ATTEMPT_ID,
+				heartbeat(2, "device", true, true, true)
+		);
+
+		assertTrue(response.applied());
+		assertTrue(response.online());
+		assertFalse(state.isHeartbeatOutageActive());
+		verify(liveUpdateNotifier).publish(
+				eq(attempt()),
+				eq(state),
+				eq(MonitoringUpdateType.HEARTBEAT_RESTORED),
+				eq(NOW)
+		);
 	}
 
 	@Test
@@ -172,7 +222,7 @@ class MonitoringServiceTests {
 		UUID syncId = UUID.randomUUID();
 		when(attemptQuery.requireOwnedActiveAttempt(INSTITUTION_ID, CANDIDATE_ID, ATTEMPT_ID))
 				.thenReturn(attempt());
-		when(stateRepository.findByAttemptId(ATTEMPT_ID)).thenReturn(Optional.of(state));
+		when(stateRepository.findByAttemptIdForUpdate(ATTEMPT_ID)).thenReturn(Optional.of(state));
 		when(syncBatchRepository.existsByAttemptIdAndSyncId(ATTEMPT_ID, syncId)).thenReturn(true);
 		MonitoringEventBatchRequest request = new MonitoringEventBatchRequest(
 				syncId,
@@ -186,6 +236,7 @@ class MonitoringServiceTests {
 		assertEquals(10, response.riskScore());
 		verify(eventRepository, never()).saveAll(anyList());
 		verify(syncBatchRepository, never()).save(any(MonitoringSyncBatch.class));
+		verify(liveUpdateNotifier, never()).publish(any(), any(), any(), any());
 	}
 
 	@Test
@@ -194,7 +245,7 @@ class MonitoringServiceTests {
 		UUID newId = UUID.randomUUID();
 		when(attemptQuery.requireOwnedActiveAttempt(INSTITUTION_ID, CANDIDATE_ID, ATTEMPT_ID))
 				.thenReturn(attempt());
-		when(stateRepository.findByAttemptId(ATTEMPT_ID)).thenReturn(Optional.empty());
+		when(stateRepository.findByAttemptIdForUpdate(ATTEMPT_ID)).thenReturn(Optional.empty());
 		when(eventRepository.findExistingClientEventIds(ATTEMPT_ID, Set.of(existingId, newId)))
 				.thenReturn(List.of(existingId));
 		List<MonitoringEvent> saved = new ArrayList<>();
@@ -218,13 +269,19 @@ class MonitoringServiceTests {
 		assertEquals(20, response.riskScore());
 		assertEquals(1, saved.size());
 		assertEquals(newId, saved.getFirst().getClientEventId());
+		verify(liveUpdateNotifier).publish(
+				eq(attempt()),
+				any(MonitoringState.class),
+				eq(MonitoringUpdateType.MONITORING_EVENTS),
+				eq(NOW)
+		);
 	}
 
 	@Test
 	void assignsServerOwnedWeightsAndZeroRiskToConnectivityEvents() {
 		when(attemptQuery.requireOwnedActiveAttempt(INSTITUTION_ID, CANDIDATE_ID, ATTEMPT_ID))
 				.thenReturn(attempt());
-		when(stateRepository.findByAttemptId(ATTEMPT_ID)).thenReturn(Optional.empty());
+		when(stateRepository.findByAttemptIdForUpdate(ATTEMPT_ID)).thenReturn(Optional.empty());
 		when(eventRepository.findExistingClientEventIds(any(), any())).thenReturn(List.of());
 		List<MonitoringEvent> saved = new ArrayList<>();
 		when(eventRepository.saveAll(anyList())).thenAnswer(invocation -> {
@@ -232,6 +289,7 @@ class MonitoringServiceTests {
 			return invocation.getArgument(0);
 		});
 		List<MonitoringEventRequest> requests = java.util.Arrays.stream(MonitoringEventType.values())
+				.filter(type -> type != MonitoringEventType.HEARTBEAT_MISSED)
 				.map(type -> event(UUID.randomUUID(), type, NOW.plusSeconds(type.ordinal())))
 				.toList();
 
@@ -247,7 +305,9 @@ class MonitoringServiceTests {
 				(first, second) -> first,
 				() -> new EnumMap<>(MonitoringEventType.class)
 		));
-		assertEquals(MonitoringRiskPolicy.weights(), persistedWeights);
+		Map<MonitoringEventType, Integer> clientWeights = new EnumMap<>(MonitoringRiskPolicy.weights());
+		clientWeights.remove(MonitoringEventType.HEARTBEAT_MISSED);
+		assertEquals(clientWeights, persistedWeights);
 		assertEquals(95, response.riskScore());
 		assertEquals(0, persistedWeights.get(MonitoringEventType.NETWORK_DISCONNECTED));
 		assertEquals(0, persistedWeights.get(MonitoringEventType.NETWORK_RECONNECTED));
@@ -259,12 +319,36 @@ class MonitoringServiceTests {
 	}
 
 	@Test
+	void rejectsClientSubmittedHeartbeatMissedEvents() {
+		when(attemptQuery.requireOwnedActiveAttempt(INSTITUTION_ID, CANDIDATE_ID, ATTEMPT_ID))
+				.thenReturn(attempt());
+		when(stateRepository.findByAttemptIdForUpdate(ATTEMPT_ID)).thenReturn(Optional.empty());
+		when(eventRepository.findExistingClientEventIds(any(), any())).thenReturn(List.of());
+
+		assertThrows(
+				IllegalArgumentException.class,
+				() -> monitoringService.recordEvents(
+						STUDENT,
+						ATTEMPT_ID,
+						new MonitoringEventBatchRequest(
+								UUID.randomUUID(),
+								List.of(event(
+										UUID.randomUUID(),
+										MonitoringEventType.HEARTBEAT_MISSED,
+										NOW
+								))
+						)
+				)
+		);
+	}
+
+	@Test
 	void capsTotalRiskAtOneHundred() {
 		MonitoringState state = state();
 		state.recordEvent(90);
 		when(attemptQuery.requireOwnedActiveAttempt(INSTITUTION_ID, CANDIDATE_ID, ATTEMPT_ID))
 				.thenReturn(attempt());
-		when(stateRepository.findByAttemptId(ATTEMPT_ID)).thenReturn(Optional.of(state));
+		when(stateRepository.findByAttemptIdForUpdate(ATTEMPT_ID)).thenReturn(Optional.of(state));
 		when(eventRepository.findExistingClientEventIds(any(), any())).thenReturn(List.of());
 		List<MonitoringEvent> saved = new ArrayList<>();
 		when(eventRepository.saveAll(anyList())).thenAnswer(invocation -> {

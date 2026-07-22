@@ -17,6 +17,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -122,9 +123,12 @@ public class SecurityConfiguration {
 	}
 
 	@Bean
-	CorsConfigurationSource corsConfigurationSource() {
+	CorsConfigurationSource corsConfigurationSource(
+			@Value("${app.monitoring.websocket.allowed-origins:http://localhost:5173}")
+			List<String> allowedOrigins
+	) {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+		configuration.setAllowedOrigins(allowedOrigins);
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
 		configuration.setExposedHeaders(List.of("WWW-Authenticate"));
@@ -162,17 +166,19 @@ public class SecurityConfiguration {
 			DaoAuthenticationProvider authenticationProvider,
 			JwtAuthenticationConverter jwtAuthenticationConverter,
 			AuthenticationEntryPoint jsonAuthenticationEntryPoint,
-			AccessDeniedHandler jsonAccessDeniedHandler
+			AccessDeniedHandler jsonAccessDeniedHandler,
+			CorsConfigurationSource corsConfigurationSource
 	) throws Exception {
 		http
 				.csrf(AbstractHttpConfigurer::disable)
-				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+				.cors(cors -> cors.configurationSource(corsConfigurationSource))
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.httpBasic(AbstractHttpConfigurer::disable)
 				.formLogin(AbstractHttpConfigurer::disable)
 				.logout(AbstractHttpConfigurer::disable)
 				.authenticationProvider(authenticationProvider)
 				.authorizeHttpRequests(authorize -> authorize
+						.requestMatchers("/ws", "/ws/**").permitAll()
 						.requestMatchers(
 								HttpMethod.POST,
 								"/api/v1/auth/login",

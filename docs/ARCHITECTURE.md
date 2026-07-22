@@ -28,3 +28,19 @@ PostgreSQL is the system of record. Module ownership rules should be reflected i
 Docker provides reproducible local and server deployments of the backend, frontend, and PostgreSQL services. Kubernetes is the target orchestration platform for deployments that require scheduling, health management, scaling, and resilient service operation.
 
 The platform must also operate on an offline institutional LAN. During offline operation, browsers connect to services hosted within the local network, and all core examination, monitoring, and persistence functions remain independent of public internet connectivity. External integrations must therefore be optional and must not sit on the critical exam-delivery path.
+
+## Live monitoring WebSocket contract
+
+The future React invigilator dashboard connects directly to the native WebSocket/STOMP endpoint at `/ws`; SockJS is not required. Its STOMP `CONNECT` frame must contain the current access token in this native header:
+
+```text
+Authorization: Bearer <access-token>
+```
+
+After the connection is authenticated, an authorized institutional staff user subscribes to:
+
+```text
+/topic/exams/{examId}/monitoring
+```
+
+The backend revalidates the current account, staff roles, institution claim, and exam ownership for every subscription. Monitoring updates are published only after their database transaction commits and contain dashboard-safe candidate and attempt state; they never contain device identifiers or hashes, answer correctness, access PINs, credentials, or tokens. Allowed browser origins are configured with `MONITORING_WEBSOCKET_ALLOWED_ORIGINS`, which defaults to `http://localhost:5173` for local development.

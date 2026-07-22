@@ -65,6 +65,12 @@ public class MonitoringState {
 	@Column(name = "online")
 	private Boolean online;
 
+	@Column(name = "heartbeat_outage_active", nullable = false)
+	private boolean heartbeatOutageActive;
+
+	@Column(name = "heartbeat_missed_at")
+	private Instant heartbeatMissedAt;
+
 	@Column(name = "event_count", nullable = false)
 	private long eventCount;
 
@@ -137,6 +143,28 @@ public class MonitoringState {
 		}
 	}
 
+	boolean markHeartbeatMissed(Instant detectedAt) {
+		if (heartbeatOutageActive || lastHeartbeatReceivedAt == null) {
+			return false;
+		}
+		heartbeatOutageActive = true;
+		heartbeatMissedAt = detectedAt;
+		online = false;
+		lastConnectivityOccurredAt = detectedAt;
+		return true;
+	}
+
+	boolean restoreFromHeartbeat(Instant receivedAt) {
+		if (!heartbeatOutageActive) {
+			return false;
+		}
+		heartbeatOutageActive = false;
+		heartbeatMissedAt = null;
+		online = true;
+		lastConnectivityOccurredAt = receivedAt;
+		return true;
+	}
+
 	int recordEvent(int riskWeight) {
 		eventCount++;
 		int available = MonitoringRiskPolicy.MAX_RISK_SCORE - riskScore;
@@ -195,6 +223,14 @@ public class MonitoringState {
 
 	public Boolean getOnline() {
 		return online;
+	}
+
+	public boolean isHeartbeatOutageActive() {
+		return heartbeatOutageActive;
+	}
+
+	public Instant getHeartbeatMissedAt() {
+		return heartbeatMissedAt;
 	}
 
 	public long getEventCount() {

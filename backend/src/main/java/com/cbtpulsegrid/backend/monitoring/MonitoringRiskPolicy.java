@@ -24,6 +24,7 @@ final class MonitoringRiskPolicy {
 		weights.put(MonitoringEventType.DEVTOOLS_SUSPECTED, 25);
 		weights.put(MonitoringEventType.NETWORK_DISCONNECTED, 0);
 		weights.put(MonitoringEventType.NETWORK_RECONNECTED, 0);
+		weights.put(MonitoringEventType.HEARTBEAT_MISSED, 0);
 		WEIGHTS = Collections.unmodifiableMap(weights);
 	}
 

@@ -29,6 +29,13 @@ app:
     enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
     email: ${BOOTSTRAP_ADMIN_EMAIL:admin@cbtpulse.local}
     password: "${BOOTSTRAP_ADMIN_PASSWORD:Admin123!}"
+  monitoring:
+    websocket:
+      allowed-origins: ${MONITORING_WEBSOCKET_ALLOWED_ORIGINS:http://localhost:5173}
+    missed-heartbeat:
+      scan-interval: ${MONITORING_HEARTBEAT_SCAN_INTERVAL:10s}
+      timeout: ${MONITORING_HEARTBEAT_TIMEOUT:30s}
+      batch-size: ${MONITORING_HEARTBEAT_BATCH_SIZE:100}
 
 springdoc:
   api-docs:

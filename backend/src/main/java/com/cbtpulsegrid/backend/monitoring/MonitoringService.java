@@ -28,6 +28,7 @@ import com.cbtpulsegrid.backend.monitoring.api.MonitoringEventBatchResponse;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringEventRequest;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringEventResponse;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringPageResponse;
+import com.cbtpulsegrid.backend.monitoring.api.MonitoringUpdateType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -58,6 +59,7 @@ public class MonitoringService {
 	private final MonitoringExamQuery examQuery;
 	private final ExaminationCandidateQuery candidateQuery;
 	private final MonitoringAuthorization authorization;
+	private final MonitoringLiveUpdateNotifier liveUpdateNotifier;
 	private final Clock clock;
 
 	public MonitoringService(
@@ -69,6 +71,7 @@ public class MonitoringService {
 			MonitoringExamQuery examQuery,
 			ExaminationCandidateQuery candidateQuery,
 			MonitoringAuthorization authorization,
+			MonitoringLiveUpdateNotifier liveUpdateNotifier,
 			Clock clock
 	) {
 		this.stateRepository = stateRepository;
@@ -79,6 +82,7 @@ public class MonitoringService {
 		this.examQuery = examQuery;
 		this.candidateQuery = candidateQuery;
 		this.authorization = authorization;
+		this.liveUpdateNotifier = liveUpdateNotifier;
 		this.clock = clock;
 	}
 
@@ -95,7 +99,7 @@ public class MonitoringService {
 				attemptId,
 				request.deviceId()
 		);
-		MonitoringState state = stateRepository.findByAttemptId(attemptId).orElse(null);
+		MonitoringState state = stateRepository.findByAttemptIdForUpdate(attemptId).orElse(null);
 		if (heartbeatReceiptRepository.existsByAttemptIdAndHeartbeatId(
 				attemptId,
 				request.heartbeatId()
@@ -119,6 +123,7 @@ public class MonitoringService {
 				request.fullscreen(),
 				request.online()
 		);
+		boolean restored = applied && state.restoreFromHeartbeat(receivedAt);
 		heartbeatReceiptRepository.save(new MonitoringHeartbeatReceipt(
 				institutionId,
 				attemptId,
@@ -127,6 +132,16 @@ public class MonitoringService {
 				receivedAt
 		));
 		stateRepository.saveAndFlush(state);
+		if (applied) {
+			liveUpdateNotifier.publish(
+					attempt,
+					state,
+					restored
+							? MonitoringUpdateType.HEARTBEAT_RESTORED
+							: MonitoringUpdateType.HEARTBEAT,
+					receivedAt
+			);
+		}
 		return toHeartbeatResponse(state, applied);
 	}
 
@@ -142,7 +157,7 @@ public class MonitoringService {
 				actor.userId(),
 				attemptId
 		);
-		MonitoringState state = stateRepository.findByAttemptId(attemptId).orElse(null);
+		MonitoringState state = stateRepository.findByAttemptIdForUpdate(attemptId).orElse(null);
 		Instant receivedAt = clock.instant();
 		if (syncBatchRepository.existsByAttemptIdAndSyncId(attemptId, request.syncId())) {
 			if (state == null) {
@@ -174,6 +189,9 @@ public class MonitoringService {
 				.toList();
 		List<MonitoringEvent> acceptedEvents = new java.util.ArrayList<>(acceptedRequests.size());
 		for (MonitoringEventRequest event : acceptedRequests) {
+			if (event.eventType() == MonitoringEventType.HEARTBEAT_MISSED) {
+				throw new IllegalArgumentException("HEARTBEAT_MISSED is generated only by the server");
+			}
 			validateMetadata(event.metadata());
 			int riskWeight = MonitoringRiskPolicy.weight(event.eventType());
 			int riskApplied = state.recordEvent(riskWeight);
@@ -202,6 +220,14 @@ public class MonitoringService {
 				receivedAt
 		));
 		stateRepository.saveAndFlush(state);
+		if (!acceptedEvents.isEmpty()) {
+			liveUpdateNotifier.publish(
+					attempt,
+					state,
+					MonitoringUpdateType.MONITORING_EVENTS,
+					receivedAt
+			);
+		}
 		return new MonitoringEventBatchResponse(
 				request.syncId(),
 				acceptedEvents.size(),
