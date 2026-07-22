@@ -7,6 +7,11 @@ import java.util.stream.Collectors;
 
 import com.cbtpulsegrid.backend.identity.Role;
 import com.cbtpulsegrid.backend.identity.UserStatus;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -32,6 +37,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/users")
 @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'INSTITUTION_ADMIN')")
+@Tag(name = "Users", description = "Institutional user-account administration")
+@SecurityRequirement(name = "bearerAuth")
 public class UserAccountController {
 
 	private final UserAccountService userAccountService;
@@ -41,6 +48,15 @@ public class UserAccountController {
 	}
 
 	@PostMapping({"", "/"})
+	@Operation(summary = "Create an institutional user account")
+	@ApiResponses({
+			@ApiResponse(responseCode = "201", description = "User account created"),
+			@ApiResponse(responseCode = "400", description = "Request or role combination is invalid"),
+			@ApiResponse(responseCode = "401", description = "Authentication is required"),
+			@ApiResponse(responseCode = "403", description = "Role or institution access is denied"),
+			@ApiResponse(responseCode = "404", description = "Institution not found"),
+			@ApiResponse(responseCode = "409", description = "Email or registration number already exists")
+	})
 	public ResponseEntity<UserResponse> create(
 			@AuthenticationPrincipal Jwt jwt,
 			@Valid @RequestBody CreateUserRequest request
@@ -50,6 +66,13 @@ public class UserAccountController {
 	}
 
 	@GetMapping({"", "/"})
+	@Operation(summary = "List and filter institutional user accounts")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "User-account page returned"),
+			@ApiResponse(responseCode = "400", description = "Invalid pagination or filter value"),
+			@ApiResponse(responseCode = "401", description = "Authentication is required"),
+			@ApiResponse(responseCode = "403", description = "Role or institution access is denied")
+	})
 	public UserPageResponse<UserResponse> list(
 			@AuthenticationPrincipal Jwt jwt,
 			@RequestParam(required = false) @Size(max = 254) String search,
@@ -71,6 +94,13 @@ public class UserAccountController {
 	}
 
 	@GetMapping("/{id}")
+	@Operation(summary = "Get an institutional user account")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "User account returned"),
+			@ApiResponse(responseCode = "401", description = "Authentication is required"),
+			@ApiResponse(responseCode = "403", description = "Role or institution access is denied"),
+			@ApiResponse(responseCode = "404", description = "User not found")
+	})
 	public UserResponse get(
 			@AuthenticationPrincipal Jwt jwt,
 			@PathVariable UUID id
@@ -79,6 +109,15 @@ public class UserAccountController {
 	}
 
 	@PutMapping("/{id}")
+	@Operation(summary = "Update user profile fields")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "User account updated"),
+			@ApiResponse(responseCode = "400", description = "Request validation failed"),
+			@ApiResponse(responseCode = "401", description = "Authentication is required"),
+			@ApiResponse(responseCode = "403", description = "Role or institution access is denied"),
+			@ApiResponse(responseCode = "404", description = "User not found"),
+			@ApiResponse(responseCode = "409", description = "Registration number already exists")
+	})
 	public UserResponse update(
 			@AuthenticationPrincipal Jwt jwt,
 			@PathVariable UUID id,
@@ -88,6 +127,14 @@ public class UserAccountController {
 	}
 
 	@PatchMapping("/{id}/status")
+	@Operation(summary = "Change a user-account status")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "User status changed"),
+			@ApiResponse(responseCode = "400", description = "Request validation failed"),
+			@ApiResponse(responseCode = "401", description = "Authentication is required"),
+			@ApiResponse(responseCode = "403", description = "Role or institution access is denied"),
+			@ApiResponse(responseCode = "404", description = "User not found")
+	})
 	public UserResponse changeStatus(
 			@AuthenticationPrincipal Jwt jwt,
 			@PathVariable UUID id,

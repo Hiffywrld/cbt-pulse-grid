@@ -30,6 +30,14 @@ app:
     email: ${BOOTSTRAP_ADMIN_EMAIL:admin@cbtpulse.local}
     password: "${BOOTSTRAP_ADMIN_PASSWORD:Admin123!}"
 
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+  paths-to-match: /api/**
+  show-actuator: false
+
 management:
   endpoints:
     web:

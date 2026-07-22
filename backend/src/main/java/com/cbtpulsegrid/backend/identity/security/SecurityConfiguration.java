@@ -55,6 +55,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableConfigurationProperties({JwtProperties.class, BootstrapAdminProperties.class})
 public class SecurityConfiguration {
 
+	public static final List<String> PUBLIC_DOCUMENTATION_ENDPOINTS = List.of(
+			"/swagger-ui.html",
+			"/swagger-ui/**",
+			"/v3/api-docs",
+			"/v3/api-docs/**"
+	);
+
 	@Bean
 	PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
@@ -173,6 +180,7 @@ public class SecurityConfiguration {
 								"/api/v1/auth/logout"
 						).permitAll()
 						.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+						.requestMatchers(PUBLIC_DOCUMENTATION_ENDPOINTS.toArray(String[]::new)).permitAll()
 						.anyRequest().authenticated()
 				)
 				.oauth2ResourceServer(resourceServer -> resourceServer
