@@ -10,6 +10,13 @@ import org.springframework.data.repository.query.Param;
 
 public interface QuestionRepository extends JpaRepository<Question, UUID>, JpaSpecificationExecutor<Question> {
 
+	long countByInstitutionIdAndSubjectIdAndDifficultyAndStatus(
+			UUID institutionId,
+			UUID subjectId,
+			QuestionDifficulty difficulty,
+			QuestionStatus status
+	);
+
 	@Query("""
 			select distinct question
 			from Question question

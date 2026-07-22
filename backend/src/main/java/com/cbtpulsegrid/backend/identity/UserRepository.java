@@ -1,7 +1,9 @@
 package com.cbtpulsegrid.backend.identity;
 
-import java.util.UUID;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +29,14 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 	);
 
 	long countByRolesContaining(Role role);
+
+	@Query("""
+			select distinct user
+			from User user
+			left join fetch user.roles
+			where user.id in :ids
+			""")
+	List<User> findAllWithRolesByIdIn(@Param("ids") Collection<UUID> ids);
 
 	@Query("""
 			select user
