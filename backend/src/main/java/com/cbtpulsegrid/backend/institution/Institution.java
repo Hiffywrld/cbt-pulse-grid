@@ -31,7 +31,7 @@ public class Institution {
 	@Column(name = "name", nullable = false, length = 160)
 	private String name;
 
-	@Column(name = "code", nullable = false, length = 32)
+	@Column(name = "code", nullable = false, updatable = false, length = 32)
 	private String code;
 
 	@Enumerated(EnumType.STRING)
@@ -83,10 +83,6 @@ public class Institution {
 
 	public String getCode() {
 		return code;
-	}
-
-	public void setCode(String code) {
-		this.code = code;
 	}
 
 	public InstitutionStatus getStatus() {

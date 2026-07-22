@@ -3,16 +3,22 @@ package com.cbtpulsegrid.backend.identity.auth;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
+import jakarta.validation.ConstraintViolationException;
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class AuthExceptionHandler {
@@ -32,6 +38,51 @@ public class AuthExceptionHandler {
 				"Request validation failed",
 				request,
 				validationErrors
+		);
+	}
+
+	@ExceptionHandler({
+			HandlerMethodValidationException.class,
+			MethodArgumentTypeMismatchException.class,
+			ConstraintViolationException.class,
+			HttpMessageNotReadableException.class,
+			IllegalArgumentException.class
+	})
+	public ResponseEntity<ApiError> handleInvalidInput(
+			Exception exception,
+			HttpServletRequest request
+	) {
+		return response(
+				HttpStatus.BAD_REQUEST,
+				"Request validation failed",
+				request,
+				Map.of()
+		);
+	}
+
+	@ExceptionHandler(NoSuchElementException.class)
+	public ResponseEntity<ApiError> handleNotFound(
+			NoSuchElementException exception,
+			HttpServletRequest request
+	) {
+		return response(
+				HttpStatus.NOT_FOUND,
+				exception.getMessage() == null ? "Resource not found" : exception.getMessage(),
+				request,
+				Map.of()
+		);
+	}
+
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<ApiError> handleConflict(
+			DataIntegrityViolationException exception,
+			HttpServletRequest request
+	) {
+		return response(
+				HttpStatus.CONFLICT,
+				"Institution code already exists",
+				request,
+				Map.of()
 		);
 	}
 
