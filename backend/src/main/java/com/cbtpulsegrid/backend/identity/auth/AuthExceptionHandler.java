@@ -5,9 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import jakarta.validation.ConstraintViolationException;
-import jakarta.servlet.http.HttpServletRequest;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
@@ -21,8 +20,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
+
 @RestControllerAdvice
 public class AuthExceptionHandler {
+
+	private static final Logger log = LoggerFactory.getLogger(AuthExceptionHandler.class);
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiError> handleValidation(
@@ -134,6 +138,25 @@ public class AuthExceptionHandler {
 		return response(
 				HttpStatus.FORBIDDEN,
 				"Access is denied",
+				request,
+				Map.of()
+		);
+	}
+
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<ApiError> handleUnexpectedException(
+			Exception exception,
+			HttpServletRequest request
+	) {
+		log.error(
+				"Unhandled exception for {} {}",
+				request.getMethod(),
+				request.getRequestURI(),
+				exception
+		);
+		return response(
+				HttpStatus.INTERNAL_SERVER_ERROR,
+				"An unexpected error occurred",
 				request,
 				Map.of()
 		);
