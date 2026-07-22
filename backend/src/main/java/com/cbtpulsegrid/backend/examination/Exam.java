@@ -1,5 +1,6 @@
 package com.cbtpulsegrid.backend.examination;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -62,6 +63,9 @@ public class Exam {
 	@Column(name = "duration_minutes", nullable = false)
 	private int durationMinutes;
 
+	@Column(name = "pass_mark_percentage", nullable = false, precision = 5, scale = 2)
+	private BigDecimal passMarkPercentage;
+
 	@Column(name = "starts_at", nullable = false)
 	private Instant startsAt;
 
@@ -113,6 +117,40 @@ public class Exam {
 			boolean shuffleOptions,
 			ExamStatus status
 	) {
+		this(
+				institutionId,
+				subjectId,
+				createdBy,
+				code,
+				title,
+				instructions,
+				durationMinutes,
+				startsAt,
+				endsAt,
+				accessPinHash,
+				shuffleQuestions,
+				shuffleOptions,
+				new BigDecimal("50.00"),
+				status
+		);
+	}
+
+	public Exam(
+			UUID institutionId,
+			UUID subjectId,
+			UUID createdBy,
+			String code,
+			String title,
+			String instructions,
+			int durationMinutes,
+			Instant startsAt,
+			Instant endsAt,
+			String accessPinHash,
+			boolean shuffleQuestions,
+			boolean shuffleOptions,
+			BigDecimal passMarkPercentage,
+			ExamStatus status
+	) {
 		this.institutionId = institutionId;
 		this.subjectId = subjectId;
 		this.createdBy = createdBy;
@@ -120,6 +158,7 @@ public class Exam {
 		this.title = title;
 		this.instructions = instructions;
 		this.durationMinutes = durationMinutes;
+		this.passMarkPercentage = passMarkPercentage;
 		this.startsAt = startsAt;
 		this.endsAt = endsAt;
 		this.accessPinHash = accessPinHash;
@@ -149,13 +188,15 @@ public class Exam {
 			Instant startsAt,
 			Instant endsAt,
 			boolean shuffleQuestions,
-			boolean shuffleOptions
+			boolean shuffleOptions,
+			BigDecimal passMarkPercentage
 	) {
 		this.subjectId = subjectId;
 		this.code = code;
 		this.title = title;
 		this.instructions = instructions;
 		this.durationMinutes = durationMinutes;
+		this.passMarkPercentage = passMarkPercentage;
 		this.startsAt = startsAt;
 		this.endsAt = endsAt;
 		this.shuffleQuestions = shuffleQuestions;
@@ -196,6 +237,10 @@ public class Exam {
 		return accessPinHash != null && !accessPinHash.isBlank();
 	}
 
+	String accessPinHash() {
+		return accessPinHash;
+	}
+
 	void setStatus(ExamStatus status) {
 		this.status = status;
 	}
@@ -230,6 +275,10 @@ public class Exam {
 
 	public int getDurationMinutes() {
 		return durationMinutes;
+	}
+
+	public BigDecimal getPassMarkPercentage() {
+		return passMarkPercentage;
 	}
 
 	public Instant getStartsAt() {

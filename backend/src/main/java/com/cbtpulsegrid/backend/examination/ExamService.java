@@ -99,6 +99,7 @@ public class ExamService {
 				passwordEncoder.encode(request.accessPin()),
 				request.shuffleQuestions(),
 				request.shuffleOptions(),
+				normalizePassMark(request.passMarkPercentage()),
 				ExamStatus.DRAFT
 		);
 		exam.replacePoolRules(toPoolRules(request.poolRules()));
@@ -179,7 +180,8 @@ public class ExamService {
 				request.startsAt(),
 				request.endsAt(),
 				request.shuffleQuestions(),
-				request.shuffleOptions()
+				request.shuffleOptions(),
+				normalizePassMark(request.passMarkPercentage())
 		);
 		exam.replacePoolRules(toPoolRules(request.poolRules()));
 		try {
@@ -205,6 +207,7 @@ public class ExamService {
 				exam.getEndsAt(),
 				toPoolRuleRequests(exam.getPoolRules())
 		);
+		normalizePassMark(exam.getPassMarkPercentage());
 		if (!exam.isAccessPinConfigured()) {
 			throw new IllegalArgumentException("Exam access PIN must be configured before publishing");
 		}
@@ -444,6 +447,16 @@ public class ExamService {
 		return search == null || search.isBlank() ? null : search.trim();
 	}
 
+	private static BigDecimal normalizePassMark(BigDecimal passMarkPercentage) {
+		BigDecimal value = passMarkPercentage == null
+				? new BigDecimal("50.00")
+				: passMarkPercentage;
+		if (value.compareTo(BigDecimal.ZERO) < 0 || value.compareTo(new BigDecimal("100.00")) > 0) {
+			throw new IllegalArgumentException("passMarkPercentage must be between 0 and 100");
+		}
+		return value;
+	}
+
 	private static void validatePage(int page, int size) {
 		if (page < 0) {
 			throw new IllegalArgumentException("Page must not be negative");
@@ -496,7 +509,8 @@ public class ExamService {
 				exam.getStatus(),
 				exam.getCreatedAt(),
 				exam.getUpdatedAt(),
-				exam.getVersion()
+				exam.getVersion(),
+				exam.getPassMarkPercentage()
 		);
 	}
 
@@ -528,7 +542,8 @@ public class ExamService {
 				poolRules,
 				exam.getCreatedAt(),
 				exam.getUpdatedAt(),
-				exam.getVersion()
+				exam.getVersion(),
+				exam.getPassMarkPercentage()
 		);
 	}
 

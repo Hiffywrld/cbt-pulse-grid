@@ -68,6 +68,27 @@ class ExamRequestValidationTests {
 		assertTrue(violations.contains("poolRules[0].marksPerQuestion"));
 	}
 
+	@Test
+	void validatesPassMarkPercentageRange() {
+		Instant startsAt = Instant.parse("2030-01-01T09:00:00Z");
+		CreateExamRequest request = new CreateExamRequest(
+				"MAT-202",
+				UUID.randomUUID(),
+				"Algebra Examination",
+				null,
+				60,
+				startsAt,
+				startsAt.plusSeconds(7200),
+				"123456",
+				false,
+				false,
+				List.of(new ExamPoolRuleRequest(QuestionDifficulty.EASY, 1, BigDecimal.ONE)),
+				new BigDecimal("100.01")
+		);
+
+		assertEquals(Set.of("passMarkPercentage"), fields(validator.validate(request)));
+	}
+
 	private static Set<String> fields(Set<? extends ConstraintViolation<?>> violations) {
 		return violations.stream()
 				.map(violation -> violation.getPropertyPath().toString())

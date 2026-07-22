@@ -94,6 +94,7 @@ class ExamServiceTests {
 		verify(passwordEncoder).encode("123456");
 		assertEquals("MAT-202", exam.getValue().getCode());
 		assertTrue(response.accessPinConfigured());
+		assertEquals(new BigDecimal("50.00"), response.passMarkPercentage());
 		assertFalse(response.toString().contains("123456"));
 		assertFalse(response.toString().contains("bcrypt-hash"));
 	}

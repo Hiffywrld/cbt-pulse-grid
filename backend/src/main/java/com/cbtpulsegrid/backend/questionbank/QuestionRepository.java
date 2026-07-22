@@ -24,4 +24,20 @@ public interface QuestionRepository extends JpaRepository<Question, UUID>, JpaSp
 			where question.id in :ids
 			""")
 	List<Question> findAllWithOptionsByIdIn(@Param("ids") List<UUID> ids);
+
+	@Query("""
+			select distinct question
+			from Question question
+			left join fetch question.options
+			where question.institutionId = :institutionId
+			and question.subjectId = :subjectId
+			and question.difficulty = :difficulty
+			and question.status = :status
+			""")
+	List<Question> findAllWithOptionsByPool(
+			@Param("institutionId") UUID institutionId,
+			@Param("subjectId") UUID subjectId,
+			@Param("difficulty") QuestionDifficulty difficulty,
+			@Param("status") QuestionStatus status
+	);
 }

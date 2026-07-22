@@ -1,5 +1,6 @@
 package com.cbtpulsegrid.backend.identity.auth;
 
+import com.cbtpulsegrid.backend.identity.ApiConflictException;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,12 +40,26 @@ class AuthExceptionHandlerTests {
                 .andExpect(content().string(not(containsString("IllegalStateException"))));
     }
 
+    @Test
+    void apiStateConflictsReuseTheJsonConflictResponse() throws Exception {
+        mockMvc.perform(get("/test/conflict"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value("Attempt state conflict"));
+    }
+
     @RestController
     static class FailingController {
 
         @GetMapping("/test/unexpected")
         void fail() {
             throw new RuntimeException("sensitive-database-detail");
+        }
+
+        @GetMapping("/test/conflict")
+        void conflict() {
+            throw new ApiConflictException("Attempt state conflict");
         }
     }
 }

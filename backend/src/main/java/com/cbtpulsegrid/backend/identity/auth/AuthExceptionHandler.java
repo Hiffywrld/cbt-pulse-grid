@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import com.cbtpulsegrid.backend.identity.ApiConflictException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -86,6 +87,19 @@ public class AuthExceptionHandler {
 		return response(
 				HttpStatus.CONFLICT,
 				exception.getMessage() == null ? "Duplicate value" : exception.getMessage(),
+				request,
+				Map.of()
+		);
+	}
+
+	@ExceptionHandler(ApiConflictException.class)
+	public ResponseEntity<ApiError> handleApiConflict(
+			ApiConflictException exception,
+			HttpServletRequest request
+	) {
+		return response(
+				HttpStatus.CONFLICT,
+				exception.getMessage() == null ? "Resource state conflict" : exception.getMessage(),
 				request,
 				Map.of()
 		);

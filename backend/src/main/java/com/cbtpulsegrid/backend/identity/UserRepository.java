@@ -34,6 +34,14 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 			select distinct user
 			from User user
 			left join fetch user.roles
+			where user.id = :id
+			""")
+	Optional<User> findWithRolesById(@Param("id") UUID id);
+
+	@Query("""
+			select distinct user
+			from User user
+			left join fetch user.roles
 			where user.id in :ids
 			""")
 	List<User> findAllWithRolesByIdIn(@Param("ids") Collection<UUID> ids);

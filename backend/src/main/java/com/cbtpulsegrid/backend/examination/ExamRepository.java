@@ -1,5 +1,7 @@
 package com.cbtpulsegrid.backend.examination;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,4 +23,10 @@ public interface ExamRepository extends JpaRepository<Exam, UUID>, JpaSpecificat
 			where exam.id = :id
 			""")
 	Optional<Exam> findWithPoolRulesById(@Param("id") UUID id);
+
+	List<Exam> findAllByInstitutionIdAndStatusAndIdIn(
+			UUID institutionId,
+			ExamStatus status,
+			Collection<UUID> ids
+	);
 }
