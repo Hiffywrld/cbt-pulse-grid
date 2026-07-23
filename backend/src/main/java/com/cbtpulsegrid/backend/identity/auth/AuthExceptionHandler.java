@@ -4,7 +4,9 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
+import com.cbtpulsegrid.backend.RequestCorrelation;
 import com.cbtpulsegrid.backend.identity.ApiConflictException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -188,8 +190,17 @@ public class AuthExceptionHandler {
 				status.getReasonPhrase(),
 				message,
 				request.getRequestURI(),
+				requestId(request),
 				validationErrors
 		);
 		return ResponseEntity.status(status).body(error);
+	}
+
+	private static UUID requestId(HttpServletRequest request) {
+		Object requestId = request.getAttribute(RequestCorrelation.REQUEST_ATTRIBUTE);
+		if (requestId instanceof UUID id) {
+			return id;
+		}
+		return RequestCorrelation.currentId().orElseGet(UUID::randomUUID);
 	}
 }

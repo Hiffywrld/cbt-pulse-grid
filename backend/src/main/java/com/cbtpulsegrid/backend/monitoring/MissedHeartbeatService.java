@@ -7,6 +7,9 @@ import java.util.UUID;
 
 import com.cbtpulsegrid.backend.attempt.AttemptMonitoringQuery.AttemptView;
 import com.cbtpulsegrid.backend.attempt.AttemptStatus;
+import com.cbtpulsegrid.backend.audit.AuditAction;
+import com.cbtpulsegrid.backend.audit.AuditResourceType;
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringUpdateType;
 import com.cbtpulsegrid.backend.monitoring.webhook.WebhookOutboxService;
 import org.springframework.stereotype.Service;
@@ -19,6 +22,7 @@ class MissedHeartbeatService {
 	private final MonitoringEventRepository eventRepository;
 	private final MonitoringLiveUpdateNotifier liveUpdateNotifier;
 	private final WebhookOutboxService webhookOutboxService;
+	private final AuditTrail auditTrail;
 	private final MissedHeartbeatProperties properties;
 	private final Clock clock;
 
@@ -27,6 +31,7 @@ class MissedHeartbeatService {
 			MonitoringEventRepository eventRepository,
 			MonitoringLiveUpdateNotifier liveUpdateNotifier,
 			WebhookOutboxService webhookOutboxService,
+			AuditTrail auditTrail,
 			MissedHeartbeatProperties properties,
 			Clock clock
 	) {
@@ -34,6 +39,7 @@ class MissedHeartbeatService {
 		this.eventRepository = eventRepository;
 		this.liveUpdateNotifier = liveUpdateNotifier;
 		this.webhookOutboxService = webhookOutboxService;
+		this.auditTrail = auditTrail;
 		this.properties = properties;
 		this.clock = clock;
 	}
@@ -44,6 +50,7 @@ class MissedHeartbeatService {
 		Instant cutoff = detectedAt.minus(properties.timeout());
 		var timedOutStates = stateRepository.findTimedOutForUpdate(
 				cutoff,
+				detectedAt,
 				properties.batchSize()
 		);
 		int processed = 0;
@@ -68,6 +75,17 @@ class MissedHeartbeatService {
 					riskApplied
 			));
 			webhookOutboxService.enqueue(missedEvent, state.getRiskScore());
+			auditTrail.record(
+					state.getInstitutionId(),
+					AuditAction.HEARTBEAT_MISSED_RECORDED,
+					AuditResourceType.MONITORING_STATE,
+					state.getId(),
+					Map.of(
+							"attemptId", state.getAttemptId(),
+							"eventCount", state.getEventCount(),
+							"riskScore", state.getRiskScore()
+					)
+			);
 			liveUpdateNotifier.publish(
 					new AttemptView(
 							state.getAttemptId(),

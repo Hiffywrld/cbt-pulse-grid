@@ -13,6 +13,9 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.audit.AuditAction;
+import com.cbtpulsegrid.backend.audit.AuditResourceType;
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.examination.api.AssignExamCandidatesRequest;
 import com.cbtpulsegrid.backend.examination.api.CreateExamRequest;
 import com.cbtpulsegrid.backend.examination.api.ExamActor;
@@ -50,6 +53,7 @@ public class ExamService {
 	private final ExaminationCandidateQuery candidateQuery;
 	private final PasswordEncoder passwordEncoder;
 	private final ExamAuthorization authorization;
+	private final AuditTrail auditTrail;
 
 	public ExamService(
 			ExamRepository examRepository,
@@ -58,7 +62,8 @@ public class ExamService {
 			ExaminationQuestionBankQuery questionBankQuery,
 			ExaminationCandidateQuery candidateQuery,
 			PasswordEncoder passwordEncoder,
-			ExamAuthorization authorization
+			ExamAuthorization authorization,
+			AuditTrail auditTrail
 	) {
 		this.examRepository = examRepository;
 		this.examCandidateRepository = examCandidateRepository;
@@ -67,6 +72,7 @@ public class ExamService {
 		this.candidateQuery = candidateQuery;
 		this.passwordEncoder = passwordEncoder;
 		this.authorization = authorization;
+		this.auditTrail = auditTrail;
 	}
 
 	@Transactional
@@ -104,7 +110,15 @@ public class ExamService {
 		);
 		exam.replacePoolRules(toPoolRules(request.poolRules()));
 		try {
-			return toDetail(examRepository.saveAndFlush(exam));
+			Exam saved = examRepository.saveAndFlush(exam);
+			auditTrail.record(
+					institutionId,
+					AuditAction.EXAM_CREATED,
+					AuditResourceType.EXAM,
+					saved.getId(),
+					Map.of("code", saved.getCode(), "status", saved.getStatus())
+			);
+			return toDetail(saved);
 		}
 		catch (DataIntegrityViolationException exception) {
 			throw new DuplicateKeyException("Exam code already exists", exception);
@@ -185,7 +199,9 @@ public class ExamService {
 		);
 		exam.replacePoolRules(toPoolRules(request.poolRules()));
 		try {
-			return toDetail(examRepository.saveAndFlush(exam));
+			Exam saved = examRepository.saveAndFlush(exam);
+			auditTrail.record(institutionId, AuditAction.EXAM_UPDATED, AuditResourceType.EXAM, id, Map.of("status", saved.getStatus()));
+			return toDetail(saved);
 		}
 		catch (DataIntegrityViolationException exception) {
 			throw new DuplicateKeyException("Exam code already exists", exception);
@@ -227,7 +243,9 @@ public class ExamService {
 			}
 		}
 		exam.setStatus(ExamStatus.PUBLISHED);
-		return toDetail(examRepository.saveAndFlush(exam));
+		Exam saved = examRepository.saveAndFlush(exam);
+		auditTrail.record(institutionId, AuditAction.EXAM_PUBLISHED, AuditResourceType.EXAM, id, Map.of("status", saved.getStatus()));
+		return toDetail(saved);
 	}
 
 	@Transactional
@@ -239,7 +257,9 @@ public class ExamService {
 			throw new IllegalArgumentException("Only DRAFT or PUBLISHED exams may be cancelled");
 		}
 		exam.setStatus(ExamStatus.CANCELLED);
-		return toDetail(examRepository.saveAndFlush(exam));
+		Exam saved = examRepository.saveAndFlush(exam);
+		auditTrail.record(institutionId, AuditAction.EXAM_CANCELLED, AuditResourceType.EXAM, id, Map.of("status", saved.getStatus()));
+		return toDetail(saved);
 	}
 
 	@Transactional
@@ -251,7 +271,9 @@ public class ExamService {
 			throw new IllegalArgumentException("Only PUBLISHED exams may be closed");
 		}
 		exam.setStatus(ExamStatus.CLOSED);
-		return toDetail(examRepository.saveAndFlush(exam));
+		Exam saved = examRepository.saveAndFlush(exam);
+		auditTrail.record(institutionId, AuditAction.EXAM_CLOSED, AuditResourceType.EXAM, id, Map.of("status", saved.getStatus()));
+		return toDetail(saved);
 	}
 
 	@Transactional
@@ -262,7 +284,9 @@ public class ExamService {
 		requireDraft(exam);
 		validatePin(accessPin);
 		exam.rotateAccessPin(passwordEncoder.encode(accessPin));
-		return toDetail(examRepository.saveAndFlush(exam));
+		Exam saved = examRepository.saveAndFlush(exam);
+		auditTrail.record(institutionId, AuditAction.EXAM_ACCESS_PIN_ROTATED, AuditResourceType.EXAM, id, Map.of());
+		return toDetail(saved);
 	}
 
 	@Transactional
@@ -285,7 +309,15 @@ public class ExamService {
 				.map(userId -> new ExamCandidate(id, userId, actor.userId()))
 				.toList();
 		try {
-			return examCandidateRepository.saveAllAndFlush(assignments).stream()
+			List<ExamCandidate> saved = examCandidateRepository.saveAllAndFlush(assignments);
+			auditTrail.record(
+					institutionId,
+					AuditAction.EXAM_CANDIDATES_ASSIGNED,
+					AuditResourceType.EXAM,
+					id,
+					Map.of("candidateCount", saved.size())
+			);
+			return saved.stream()
 					.map(assignment -> toCandidateResponse(assignment, requireProfile(profiles, assignment.getUserId())))
 					.toList();
 		}
@@ -333,6 +365,14 @@ public class ExamService {
 		ExamCandidate assignment = examCandidateRepository.findByExamIdAndUserId(id, userId)
 				.orElseThrow(() -> new NoSuchElementException("Exam candidate assignment not found"));
 		examCandidateRepository.delete(assignment);
+		examCandidateRepository.flush();
+		auditTrail.record(
+				institutionId,
+				AuditAction.EXAM_CANDIDATE_REMOVED,
+				AuditResourceType.EXAM_CANDIDATE,
+				assignment.getId(),
+				Map.of("examId", id, "candidateId", userId)
+		);
 	}
 
 	private Exam requireOwnedExam(UUID institutionId, UUID id) {

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.institution.InstitutionService;
 import com.cbtpulsegrid.backend.questionbank.api.QuestionController;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,7 +51,8 @@ class QuestionListRegressionTests {
 				subjectService,
 				institutionService,
 				new QuestionStructureValidator(),
-				new QuestionBankAuthorization()
+				new QuestionBankAuthorization(),
+				mock(AuditTrail.class)
 		);
 		QuestionController controller = new QuestionController(questionService);
 

@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.examination.api.AssignExamCandidatesRequest;
 import com.cbtpulsegrid.backend.examination.api.CreateExamRequest;
 import com.cbtpulsegrid.backend.examination.api.ExamActor;
@@ -65,6 +66,8 @@ class ExamServiceTests {
 	private ExaminationCandidateQuery candidateQuery;
 	@Mock
 	private PasswordEncoder passwordEncoder;
+	@Mock
+	private AuditTrail auditTrail;
 
 	private ExamService examService;
 
@@ -77,7 +80,8 @@ class ExamServiceTests {
 				questionBankQuery,
 				candidateQuery,
 				passwordEncoder,
-				new ExamAuthorization()
+				new ExamAuthorization(),
+				auditTrail
 		);
 	}
 

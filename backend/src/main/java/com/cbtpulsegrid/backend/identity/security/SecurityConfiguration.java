@@ -3,11 +3,13 @@ package com.cbtpulsegrid.backend.identity.security;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.UUID;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import com.cbtpulsegrid.backend.identity.bootstrap.BootstrapAdminProperties;
+import com.cbtpulsegrid.backend.RequestCorrelation;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
@@ -124,14 +126,22 @@ public class SecurityConfiguration {
 
 	@Bean
 	CorsConfigurationSource corsConfigurationSource(
-			@Value("${app.monitoring.websocket.allowed-origins:http://localhost:5173}")
+			@Value("${app.cors.allowed-origins:http://localhost:5173}")
 			List<String> allowedOrigins
 	) {
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowedOrigins(allowedOrigins);
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
-		configuration.setExposedHeaders(List.of("WWW-Authenticate"));
+		configuration.setAllowedHeaders(List.of(
+				"Authorization",
+				"Content-Type",
+				"Accept",
+				RequestCorrelation.HEADER_NAME
+		));
+		configuration.setExposedHeaders(List.of(
+				"WWW-Authenticate",
+				RequestCorrelation.HEADER_NAME
+		));
 		configuration.setAllowCredentials(true);
 		configuration.setMaxAge(3600L);
 
@@ -143,6 +153,7 @@ public class SecurityConfiguration {
 	@Bean
 	AuthenticationEntryPoint jsonAuthenticationEntryPoint() {
 		return (request, response, exception) -> writeSecurityError(
+				request,
 				response,
 				HttpServletResponse.SC_UNAUTHORIZED,
 				"Unauthorized",
@@ -153,6 +164,7 @@ public class SecurityConfiguration {
 	@Bean
 	AccessDeniedHandler jsonAccessDeniedHandler() {
 		return (request, response, exception) -> writeSecurityError(
+				request,
 				response,
 				HttpServletResponse.SC_FORBIDDEN,
 				"Forbidden",
@@ -202,6 +214,7 @@ public class SecurityConfiguration {
 	}
 
 	private static void writeSecurityError(
+			jakarta.servlet.http.HttpServletRequest request,
 			HttpServletResponse response,
 			int status,
 			String error,
@@ -210,10 +223,13 @@ public class SecurityConfiguration {
 		response.setStatus(status);
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+		Object correlation = request.getAttribute(RequestCorrelation.REQUEST_ATTRIBUTE);
+		UUID requestId = correlation instanceof UUID id ? id : UUID.randomUUID();
 		response.getWriter().write(
 				"{\"status\":" + status
 						+ ",\"error\":\"" + error
-						+ "\",\"message\":\"" + message + "\"}"
+						+ "\",\"message\":\"" + message
+						+ "\",\"requestId\":\"" + requestId + "\"}"
 		);
 	}
 }

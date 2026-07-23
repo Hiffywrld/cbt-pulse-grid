@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.identity.Role;
 import com.cbtpulsegrid.backend.identity.User;
 import com.cbtpulsegrid.backend.identity.UserRepository;
@@ -45,6 +46,9 @@ class UserAccountServiceTests {
 
 	@Mock
 	private PasswordEncoder passwordEncoder;
+
+	@Mock
+	private AuditTrail auditTrail;
 
 	@InjectMocks
 	private UserAccountService userAccountService;

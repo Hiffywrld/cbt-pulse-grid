@@ -36,6 +36,9 @@ import com.cbtpulsegrid.backend.attempt.api.StudentExamSummaryResponse;
 import com.cbtpulsegrid.backend.attempt.api.SyncAnswerRequest;
 import com.cbtpulsegrid.backend.attempt.api.SyncAnswersRequest;
 import com.cbtpulsegrid.backend.attempt.api.SyncAnswersResponse;
+import com.cbtpulsegrid.backend.audit.AuditAction;
+import com.cbtpulsegrid.backend.audit.AuditResourceType;
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.examination.StudentExamQuery;
 import com.cbtpulsegrid.backend.examination.StudentExamQuery.AttemptExamDefinition;
 import com.cbtpulsegrid.backend.examination.StudentExamQuery.PoolRule;
@@ -60,6 +63,7 @@ public class AttemptService {
 	private final AttemptQuestionBankQuery questionBankQuery;
 	private final SecureRandom secureRandom;
 	private final Clock clock;
+	private final AuditTrail auditTrail;
 
 	public AttemptService(
 			ExamAttemptRepository attemptRepository,
@@ -70,7 +74,8 @@ public class AttemptService {
 			StudentExamQuery examQuery,
 			AttemptQuestionBankQuery questionBankQuery,
 			SecureRandom secureRandom,
-			Clock clock
+			Clock clock,
+			AuditTrail auditTrail
 	) {
 		this.attemptRepository = attemptRepository;
 		this.questionRepository = questionRepository;
@@ -81,6 +86,7 @@ public class AttemptService {
 		this.questionBankQuery = questionBankQuery;
 		this.secureRandom = secureRandom;
 		this.clock = clock;
+		this.auditTrail = auditTrail;
 	}
 
 	@Transactional(readOnly = true)
@@ -355,6 +361,16 @@ public class AttemptService {
 		}
 	}
 
+	@Transactional
+	public int autoSubmitExpiredBatch(int batchSize) {
+		Instant now = clock.instant();
+		List<ExamAttempt> attempts = attemptRepository.findExpiredForUpdate(now, batchSize);
+		for (ExamAttempt attempt : attempts) {
+			score(attempt, now, AttemptStatus.AUTO_SUBMITTED);
+		}
+		return attempts.size();
+	}
+
 	@Transactional(readOnly = true)
 	public List<UUID> findExpiredAttemptIds(int batchSize) {
 		return attemptRepository.findExpiredIds(
@@ -404,6 +420,19 @@ public class AttemptService {
 		boolean passed = percentage.compareTo(definition.passMarkPercentage()) >= 0;
 		attempt.complete(completedStatus, now, score, maximumScore, percentage, passed);
 		attemptRepository.saveAndFlush(attempt);
+		auditTrail.record(
+				attempt.getInstitutionId(),
+				completedStatus == AttemptStatus.AUTO_SUBMITTED
+						? AuditAction.ATTEMPT_AUTO_SUBMITTED
+						: AuditAction.ATTEMPT_SUBMITTED,
+				AuditResourceType.ATTEMPT,
+				attempt.getId(),
+				Map.of(
+						"examId", attempt.getExamId(),
+						"candidateId", attempt.getCandidateId(),
+						"submissionStatus", completedStatus
+				)
+		);
 	}
 
 	private List<SelectedSnapshot> selectQuestions(AttemptExamDefinition definition) {

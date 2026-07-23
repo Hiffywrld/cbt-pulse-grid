@@ -8,6 +8,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringUpdateType;
 import com.cbtpulsegrid.backend.monitoring.webhook.WebhookOutboxService;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +42,8 @@ class MissedHeartbeatServiceTests {
 	private MonitoringLiveUpdateNotifier liveUpdateNotifier;
 	@Mock
 	private WebhookOutboxService webhookOutboxService;
+	@Mock
+	private AuditTrail auditTrail;
 
 	private MissedHeartbeatService service;
 
@@ -52,7 +55,7 @@ class MissedHeartbeatServiceTests {
 	@Test
 	void detectsTimeoutOnceAndRecordsZeroRiskMissedEvent() {
 		MonitoringState state = onlineState(NOW.minusSeconds(31));
-		when(stateRepository.findTimedOutForUpdate(CUTOFF, 100)).thenReturn(List.of(state));
+		when(stateRepository.findTimedOutForUpdate(CUTOFF, NOW, 100)).thenReturn(List.of(state));
 		when(eventRepository.save(any(MonitoringEvent.class)))
 				.thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -79,7 +82,7 @@ class MissedHeartbeatServiceTests {
 	@Test
 	void doesNotCreateAnotherMissedEventDuringTheSameOutage() {
 		MonitoringState state = onlineState(NOW.minusSeconds(31));
-		when(stateRepository.findTimedOutForUpdate(CUTOFF, 100))
+		when(stateRepository.findTimedOutForUpdate(CUTOFF, NOW, 100))
 				.thenReturn(List.of(state))
 				.thenReturn(List.of());
 
@@ -93,7 +96,7 @@ class MissedHeartbeatServiceTests {
 	@Test
 	void recoveryAllowsASecondLaterOutageEpisode() {
 		MonitoringState state = onlineState(NOW.minusSeconds(31));
-		when(stateRepository.findTimedOutForUpdate(CUTOFF, 100)).thenReturn(List.of(state));
+		when(stateRepository.findTimedOutForUpdate(CUTOFF, NOW, 100)).thenReturn(List.of(state));
 		service.detectMissedHeartbeats();
 
 		state.applyHeartbeat(
@@ -109,7 +112,7 @@ class MissedHeartbeatServiceTests {
 		assertFalse(state.isHeartbeatOutageActive());
 
 		Instant secondScan = NOW.plusSeconds(40);
-		when(stateRepository.findTimedOutForUpdate(secondScan.minusSeconds(30), 100))
+		when(stateRepository.findTimedOutForUpdate(secondScan.minusSeconds(30), secondScan, 100))
 				.thenReturn(List.of(state));
 		assertEquals(1, serviceAt(secondScan).detectMissedHeartbeats());
 
@@ -124,6 +127,7 @@ class MissedHeartbeatServiceTests {
 		Method method = MonitoringStateRepository.class.getDeclaredMethod(
 				"findTimedOutForUpdate",
 				Instant.class,
+				Instant.class,
 				int.class
 		);
 		String sql = method.getAnnotation(Query.class).value().toLowerCase();
@@ -131,6 +135,7 @@ class MissedHeartbeatServiceTests {
 		assertTrue(sql.contains("for update of state skip locked"));
 		assertTrue(sql.contains("heartbeat_outage_active = false"));
 		assertTrue(sql.contains("attempt.status = 'in_progress'"));
+		assertTrue(sql.contains("attempt.expires_at > :now"));
 	}
 
 	private MissedHeartbeatService serviceAt(Instant instant) {
@@ -139,6 +144,7 @@ class MissedHeartbeatServiceTests {
 				eventRepository,
 				liveUpdateNotifier,
 				webhookOutboxService,
+				auditTrail,
 				new MissedHeartbeatProperties(
 						Duration.ofSeconds(10),
 						Duration.ofSeconds(30),

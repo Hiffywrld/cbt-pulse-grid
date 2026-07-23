@@ -1,6 +1,7 @@
 package com.cbtpulsegrid.backend.attempt;
 
 import java.math.BigDecimal;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -21,6 +22,7 @@ import com.cbtpulsegrid.backend.attempt.api.StartAttemptRequest;
 import com.cbtpulsegrid.backend.attempt.api.StudentActor;
 import com.cbtpulsegrid.backend.attempt.api.SyncAnswerRequest;
 import com.cbtpulsegrid.backend.attempt.api.SyncAnswersRequest;
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.examination.StudentExamQuery;
 import com.cbtpulsegrid.backend.examination.StudentExamQuery.AttemptExamDefinition;
 import com.cbtpulsegrid.backend.examination.StudentExamQuery.PoolRule;
@@ -37,6 +39,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.data.jpa.repository.Query;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -77,6 +80,8 @@ class AttemptServiceTests {
 	private StudentExamQuery examQuery;
 	@Mock
 	private AttemptQuestionBankQuery questionBankQuery;
+	@Mock
+	private AuditTrail auditTrail;
 
 	private AttemptService attemptService;
 
@@ -91,7 +96,8 @@ class AttemptServiceTests {
 				examQuery,
 				questionBankQuery,
 				new SecureRandom(new byte[] {1, 2, 3, 4}),
-				Clock.fixed(NOW, ZoneOffset.UTC)
+				Clock.fixed(NOW, ZoneOffset.UTC),
+				auditTrail
 		);
 	}
 
@@ -375,6 +381,46 @@ class AttemptServiceTests {
 		assertEquals(AttemptStatus.AUTO_SUBMITTED, attempt.getStatus());
 		assertEquals(BigDecimal.ZERO.setScale(2), attempt.getPercentage());
 		assertFalse(attempt.getPassed());
+	}
+
+	@Test
+	void expiryBatchAndManualSubmitProduceOneIdenticalResult() {
+		ExamAttempt attempt = inProgressAttempt(NOW, hashUnchecked("device"));
+		AttemptQuestion question = attemptQuestion(attempt.getId(), QuestionType.TRUE_FALSE, BigDecimal.ONE);
+		when(attemptRepository.findExpiredForUpdate(NOW, 25)).thenReturn(List.of(attempt));
+		when(attemptRepository.findByIdForUpdate(attempt.getId())).thenReturn(Optional.of(attempt));
+		when(questionRepository.findAllWithOptionsByAttemptId(attempt.getId())).thenReturn(List.of(question));
+		when(answerRepository.findAllWithSelectionsByAttemptId(attempt.getId())).thenReturn(List.of());
+		when(examQuery.requireAssignedDefinition(INSTITUTION_ID, CANDIDATE_ID, EXAM_ID))
+				.thenReturn(definition(List.of(new PoolRule(
+						QuestionDifficulty.EASY,
+						1,
+						BigDecimal.ONE
+				))));
+		when(attemptRepository.saveAndFlush(attempt)).thenReturn(attempt);
+
+		assertEquals(1, attemptService.autoSubmitExpiredBatch(25));
+		var scheduledResult = attemptService.submit(ACTOR, attempt.getId());
+		var repeatedResult = attemptService.submit(ACTOR, attempt.getId());
+
+		assertEquals(AttemptStatus.AUTO_SUBMITTED, scheduledResult.status());
+		assertEquals(scheduledResult, repeatedResult);
+		verify(questionRepository, times(1)).findAllWithOptionsByAttemptId(attempt.getId());
+	}
+
+	@Test
+	void expiryBatchUsesPostgresqlSkipLockedForReplicaSafety() throws Exception {
+		Method method = ExamAttemptRepository.class.getDeclaredMethod(
+				"findExpiredForUpdate",
+				Instant.class,
+				int.class
+		);
+		String sql = method.getAnnotation(Query.class).value().toLowerCase();
+
+		assertTrue(sql.contains("status = 'in_progress'"));
+		assertTrue(sql.contains("expires_at <= :now"));
+		assertTrue(sql.contains("limit :batchsize"));
+		assertTrue(sql.contains("for update of attempt skip locked"));
 	}
 
 	@Test

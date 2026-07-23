@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.institution.InstitutionService;
 import com.cbtpulsegrid.backend.questionbank.api.QuestionBankActor;
 import com.cbtpulsegrid.backend.questionbank.api.QuestionOptionRequest;
@@ -42,6 +43,8 @@ class QuestionServiceTests {
 
 	@Mock
 	private InstitutionService institutionService;
+	@Mock
+	private AuditTrail auditTrail;
 
 	private QuestionService questionService;
 
@@ -52,7 +55,8 @@ class QuestionServiceTests {
 				subjectService,
 				institutionService,
 				new QuestionStructureValidator(),
-				new QuestionBankAuthorization()
+				new QuestionBankAuthorization(),
+				auditTrail
 		);
 	}
 

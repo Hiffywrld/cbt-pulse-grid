@@ -5,6 +5,9 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.audit.AuditAction;
+import com.cbtpulsegrid.backend.audit.AuditResourceType;
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.identity.ApiConflictException;
 import com.cbtpulsegrid.backend.monitoring.MonitoringEventType;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringActor;
@@ -32,6 +35,7 @@ public class WebhookService {
 	private final WebhookSigner signer;
 	private final WebhookProperties properties;
 	private final Clock clock;
+	private final AuditTrail auditTrail;
 
 	WebhookService(
 			WebhookSubscriptionRepository subscriptionRepository,
@@ -40,7 +44,8 @@ public class WebhookService {
 			WebhookUrlValidator urlValidator,
 			WebhookSigner signer,
 			WebhookProperties properties,
-			Clock clock
+			Clock clock,
+			AuditTrail auditTrail
 	) {
 		this.subscriptionRepository = subscriptionRepository;
 		this.deliveryRepository = deliveryRepository;
@@ -49,6 +54,7 @@ public class WebhookService {
 		this.signer = signer;
 		this.properties = properties;
 		this.clock = clock;
+		this.auditTrail = auditTrail;
 	}
 
 	@Transactional
@@ -73,6 +79,16 @@ public class WebhookService {
 						destinationUrl,
 						eventTypes,
 						actor.userId()
+				)
+		);
+		auditTrail.record(
+				institutionId,
+				AuditAction.WEBHOOK_SUBSCRIPTION_CREATED,
+				AuditResourceType.WEBHOOK_SUBSCRIPTION,
+				subscription.getId(),
+				java.util.Map.of(
+						"status", subscription.getStatus(),
+						"allEventTypes", subscription.isAllEventTypes()
 				)
 		);
 		return secretResponse(subscription);
@@ -118,6 +134,13 @@ public class WebhookService {
 		authorization.requireTenant(institutionId, subscription.getInstitutionId());
 		subscription.changeStatus(request.status(), actor.userId());
 		subscriptionRepository.flush();
+		auditTrail.record(
+				institutionId,
+				AuditAction.WEBHOOK_SUBSCRIPTION_STATUS_CHANGED,
+				AuditResourceType.WEBHOOK_SUBSCRIPTION,
+				id,
+				java.util.Map.of("status", request.status())
+		);
 		return toResponse(subscription);
 	}
 
@@ -129,6 +152,13 @@ public class WebhookService {
 		authorization.requireTenant(institutionId, subscription.getInstitutionId());
 		subscription.rotateSecret(actor.userId());
 		subscriptionRepository.flush();
+		auditTrail.record(
+				institutionId,
+				AuditAction.WEBHOOK_SECRET_ROTATED,
+				AuditResourceType.WEBHOOK_SUBSCRIPTION,
+				id,
+				java.util.Map.of("rotation", "completed")
+		);
 		return secretResponse(subscription);
 	}
 
@@ -162,6 +192,13 @@ public class WebhookService {
 		authorization.requireTenant(institutionId, delivery.getInstitutionId());
 		delivery.manualRetry(clock.instant());
 		deliveryRepository.flush();
+		auditTrail.record(
+				institutionId,
+				AuditAction.WEBHOOK_DELIVERY_RETRIED,
+				AuditResourceType.WEBHOOK_DELIVERY,
+				deliveryId,
+				java.util.Map.of("status", delivery.getStatus())
+		);
 		return toResponse(delivery);
 	}
 

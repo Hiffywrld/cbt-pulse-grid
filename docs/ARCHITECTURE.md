@@ -44,3 +44,15 @@ After the connection is authenticated, an authorized institutional staff user su
 ```
 
 The backend revalidates the current account, staff roles, institution claim, and exam ownership for every subscription. Monitoring updates are published only after their database transaction commits and contain dashboard-safe candidate and attempt state; they never contain device identifiers or hashes, answer correctness, access PINs, credentials, or tokens. Allowed browser origins are configured with `MONITORING_WEBSOCKET_ALLOWED_ORIGINS`, which defaults to `http://localhost:5173` for local development.
+
+## Final backend operations
+
+Expired attempts are finalized by a configurable scheduled worker. Each transaction claims a bounded batch of eligible `IN_PROGRESS` rows with PostgreSQL `FOR UPDATE SKIP LOCKED`, applies the same idempotent scoring path used by manual submission, and commits before the next batch. This permits multiple replicas to share work without duplicate scoring and prevents logically expired attempts from generating missed-heartbeat incidents.
+
+The result module is a read model over finalized attempt snapshots and exam assignments. It uses bounded aggregate and paginated SQL queries so assigned candidates who never started remain visible and result pages do not introduce entity-graph N+1 queries. Objective answer review is available only for finalized attempts and only to authorized staff in the owning institution.
+
+The audit module owns an append-only institutional event log. Domain services write audit records within their existing transactions, including the authenticated actor, sorted roles, action, target, outcome, timestamp, request correlation identifier, and tightly bounded non-sensitive metadata. The database rejects update and delete operations, and the repository intentionally exposes no deletion API.
+
+Every REST request receives a UUID correlation identifier in `X-Request-Id`. A valid caller-supplied UUID is preserved; an absent value is generated; malformed or ambiguous values are rejected. The identifier is returned in response headers and JSON errors and is included in server log context. REST CORS origins are independently configured with `REST_CORS_ALLOWED_ORIGINS`.
+
+Actuator exposes only health and info through the web endpoint set. Liveness and readiness probe groups are enabled, health details and component structure are suppressed, and existing security rules keep health probes public while protecting info.

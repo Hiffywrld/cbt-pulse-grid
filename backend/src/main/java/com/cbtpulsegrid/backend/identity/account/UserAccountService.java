@@ -7,6 +7,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.cbtpulsegrid.backend.audit.AuditAction;
+import com.cbtpulsegrid.backend.audit.AuditResourceType;
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.identity.Role;
 import com.cbtpulsegrid.backend.identity.User;
 import com.cbtpulsegrid.backend.identity.UserRepository;
@@ -35,15 +38,18 @@ public class UserAccountService {
 	private final UserRepository userRepository;
 	private final InstitutionService institutionService;
 	private final PasswordEncoder passwordEncoder;
+	private final AuditTrail auditTrail;
 
 	public UserAccountService(
 			UserRepository userRepository,
 			InstitutionService institutionService,
-			PasswordEncoder passwordEncoder
+			PasswordEncoder passwordEncoder,
+			AuditTrail auditTrail
 	) {
 		this.userRepository = userRepository;
 		this.institutionService = institutionService;
 		this.passwordEncoder = passwordEncoder;
+		this.auditTrail = auditTrail;
 	}
 
 	@Transactional
@@ -72,7 +78,15 @@ public class UserAccountService {
 		user.getRoles().addAll(roles);
 
 		try {
-			return toResponse(userRepository.saveAndFlush(user));
+			User saved = userRepository.saveAndFlush(user);
+			auditTrail.record(
+					institutionId,
+					AuditAction.USER_CREATED,
+					AuditResourceType.USER,
+					saved.getId(),
+					java.util.Map.of("roles", roles, "status", saved.getStatus())
+			);
+			return toResponse(saved);
 		}
 		catch (DataIntegrityViolationException exception) {
 			throw new DuplicateKeyException("Email or registration number already exists", exception);
@@ -122,7 +136,15 @@ public class UserAccountService {
 		user.setRegistrationNumber(registrationNumber);
 
 		try {
-			return toResponse(userRepository.saveAndFlush(user));
+			User saved = userRepository.saveAndFlush(user);
+			auditTrail.record(
+					saved.getInstitutionId(),
+					AuditAction.USER_UPDATED,
+					AuditResourceType.USER,
+					saved.getId(),
+					java.util.Map.of()
+			);
+			return toResponse(saved);
 		}
 		catch (DataIntegrityViolationException exception) {
 			throw new DuplicateKeyException("Registration number already exists", exception);
@@ -138,7 +160,15 @@ public class UserAccountService {
 		User user = findUser(id);
 		assertCanAccess(actor, user);
 		user.setStatus(status);
-		return toResponse(userRepository.saveAndFlush(user));
+		User saved = userRepository.saveAndFlush(user);
+		auditTrail.record(
+				saved.getInstitutionId(),
+				AuditAction.USER_STATUS_CHANGED,
+				AuditResourceType.USER,
+				saved.getId(),
+				java.util.Map.of("status", status)
+		);
+		return toResponse(saved);
 	}
 
 	private Set<Role> validateCreationRoles(ActorContext actor, Set<Role> requestedRoles) {

@@ -8,6 +8,9 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.cbtpulsegrid.backend.audit.AuditAction;
+import com.cbtpulsegrid.backend.audit.AuditResourceType;
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.institution.InstitutionService;
 import com.cbtpulsegrid.backend.questionbank.QuestionStructureValidator.OptionRule;
 import com.cbtpulsegrid.backend.questionbank.api.CreateQuestionRequest;
@@ -34,19 +37,22 @@ public class QuestionService {
 	private final InstitutionService institutionService;
 	private final QuestionStructureValidator structureValidator;
 	private final QuestionBankAuthorization authorization;
+	private final AuditTrail auditTrail;
 
 	public QuestionService(
 			QuestionRepository questionRepository,
 			SubjectService subjectService,
 			InstitutionService institutionService,
 			QuestionStructureValidator structureValidator,
-			QuestionBankAuthorization authorization
+			QuestionBankAuthorization authorization,
+			AuditTrail auditTrail
 	) {
 		this.questionRepository = questionRepository;
 		this.subjectService = subjectService;
 		this.institutionService = institutionService;
 		this.structureValidator = structureValidator;
 		this.authorization = authorization;
+		this.auditTrail = auditTrail;
 	}
 
 	@Transactional
@@ -67,7 +73,15 @@ public class QuestionService {
 				QuestionStatus.DRAFT
 		);
 		question.replaceOptions(toOptions(request.options()));
-		return toStaffResponse(questionRepository.saveAndFlush(question));
+		Question saved = questionRepository.saveAndFlush(question);
+		auditTrail.record(
+				institutionId,
+				AuditAction.QUESTION_CREATED,
+				AuditResourceType.QUESTION,
+				saved.getId(),
+				Map.of("subjectId", saved.getSubjectId(), "status", saved.getStatus())
+		);
+		return toStaffResponse(saved);
 	}
 
 	@Transactional(readOnly = true)
@@ -156,7 +170,9 @@ public class QuestionService {
 		question.setDifficulty(request.difficulty());
 		question.setMarks(request.marks());
 		question.replaceOptions(toOptions(request.options()));
-		return toStaffResponse(questionRepository.saveAndFlush(question));
+		Question saved = questionRepository.saveAndFlush(question);
+		auditTrail.record(institutionId, AuditAction.QUESTION_UPDATED, AuditResourceType.QUESTION, id, Map.of("subjectId", saved.getSubjectId()));
+		return toStaffResponse(saved);
 	}
 
 	@Transactional
@@ -180,7 +196,17 @@ public class QuestionService {
 			);
 		}
 		question.setStatus(status);
-		return toStaffResponse(questionRepository.saveAndFlush(question));
+		Question saved = questionRepository.saveAndFlush(question);
+		auditTrail.record(
+				institutionId,
+				status == QuestionStatus.PUBLISHED
+						? AuditAction.QUESTION_PUBLISHED
+						: AuditAction.QUESTION_STATUS_CHANGED,
+				AuditResourceType.QUESTION,
+				id,
+				Map.of("status", status)
+		);
+		return toStaffResponse(saved);
 	}
 
 	private Question requireOwnedQuestion(UUID institutionId, UUID id) {

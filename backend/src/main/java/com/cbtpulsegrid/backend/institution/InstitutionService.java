@@ -4,6 +4,9 @@ import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.audit.AuditAction;
+import com.cbtpulsegrid.backend.audit.AuditResourceType;
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.institution.api.CreateInstitutionRequest;
 import com.cbtpulsegrid.backend.institution.api.InstitutionResponse;
 import com.cbtpulsegrid.backend.institution.api.PageResponse;
@@ -21,9 +24,11 @@ public class InstitutionService {
 	private static final int MAX_PAGE_SIZE = 100;
 
 	private final InstitutionRepository institutionRepository;
+	private final AuditTrail auditTrail;
 
-	public InstitutionService(InstitutionRepository institutionRepository) {
+	public InstitutionService(InstitutionRepository institutionRepository, AuditTrail auditTrail) {
 		this.institutionRepository = institutionRepository;
+		this.auditTrail = auditTrail;
 	}
 
 	@Transactional
@@ -39,7 +44,15 @@ public class InstitutionService {
 				InstitutionStatus.ACTIVE
 		);
 		try {
-			return toResponse(institutionRepository.saveAndFlush(institution));
+			Institution saved = institutionRepository.saveAndFlush(institution);
+			auditTrail.record(
+					saved.getId(),
+					AuditAction.INSTITUTION_CREATED,
+					AuditResourceType.INSTITUTION,
+					saved.getId(),
+					java.util.Map.of("code", saved.getCode(), "status", saved.getStatus())
+			);
+			return toResponse(saved);
 		}
 		catch (DataIntegrityViolationException exception) {
 			throw new DuplicateKeyException("Institution code already exists", exception);
@@ -79,14 +92,24 @@ public class InstitutionService {
 	public InstitutionResponse updateName(UUID id, String name) {
 		Institution institution = findInstitution(id);
 		institution.setName(name.trim());
-		return toResponse(institutionRepository.saveAndFlush(institution));
+		Institution saved = institutionRepository.saveAndFlush(institution);
+		auditTrail.record(id, AuditAction.INSTITUTION_UPDATED, AuditResourceType.INSTITUTION, id, java.util.Map.of());
+		return toResponse(saved);
 	}
 
 	@Transactional
 	public InstitutionResponse changeStatus(UUID id, InstitutionStatus status) {
 		Institution institution = findInstitution(id);
 		institution.setStatus(status);
-		return toResponse(institutionRepository.saveAndFlush(institution));
+		Institution saved = institutionRepository.saveAndFlush(institution);
+		auditTrail.record(
+				id,
+				AuditAction.INSTITUTION_STATUS_CHANGED,
+				AuditResourceType.INSTITUTION,
+				id,
+				java.util.Map.of("status", status)
+		);
+		return toResponse(saved);
 	}
 
 	private Institution findInstitution(UUID id) {

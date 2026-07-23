@@ -15,6 +15,9 @@ import java.util.stream.Collectors;
 import com.cbtpulsegrid.backend.attempt.AttemptMonitoringQuery;
 import com.cbtpulsegrid.backend.attempt.AttemptMonitoringQuery.AttemptPage;
 import com.cbtpulsegrid.backend.attempt.AttemptMonitoringQuery.AttemptView;
+import com.cbtpulsegrid.backend.audit.AuditAction;
+import com.cbtpulsegrid.backend.audit.AuditResourceType;
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.examination.MonitoringExamQuery;
 import com.cbtpulsegrid.backend.identity.ExaminationCandidateQuery;
 import com.cbtpulsegrid.backend.identity.ExaminationCandidateQuery.CandidateProfile;
@@ -62,6 +65,7 @@ public class MonitoringService {
 	private final MonitoringAuthorization authorization;
 	private final MonitoringLiveUpdateNotifier liveUpdateNotifier;
 	private final WebhookOutboxService webhookOutboxService;
+	private final AuditTrail auditTrail;
 	private final Clock clock;
 
 	public MonitoringService(
@@ -75,6 +79,7 @@ public class MonitoringService {
 			MonitoringAuthorization authorization,
 			MonitoringLiveUpdateNotifier liveUpdateNotifier,
 			WebhookOutboxService webhookOutboxService,
+			AuditTrail auditTrail,
 			Clock clock
 	) {
 		this.stateRepository = stateRepository;
@@ -87,6 +92,7 @@ public class MonitoringService {
 		this.authorization = authorization;
 		this.liveUpdateNotifier = liveUpdateNotifier;
 		this.webhookOutboxService = webhookOutboxService;
+		this.auditTrail = auditTrail;
 		this.clock = clock;
 	}
 
@@ -237,6 +243,18 @@ public class MonitoringService {
 					state,
 					MonitoringUpdateType.MONITORING_EVENTS,
 					receivedAt
+			);
+			auditTrail.record(
+					institutionId,
+					AuditAction.MONITORING_EVENTS_RECORDED,
+					AuditResourceType.MONITORING_STATE,
+					state.getId(),
+					Map.of(
+							"attemptId", attemptId,
+							"acceptedCount", acceptedEvents.size(),
+							"eventCount", state.getEventCount(),
+							"riskScore", state.getRiskScore()
+					)
 			);
 		}
 		return new MonitoringEventBatchResponse(

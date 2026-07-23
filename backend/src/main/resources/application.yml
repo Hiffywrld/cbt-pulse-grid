@@ -20,6 +20,12 @@ spring:
     enabled: true
 
 app:
+  cors:
+    allowed-origins: ${REST_CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  attempts:
+    expiry:
+      scan-interval: ${ATTEMPT_EXPIRY_SCAN_INTERVAL:10s}
+      batch-size: ${ATTEMPT_EXPIRY_BATCH_SIZE:50}
   jwt:
     issuer: ${JWT_ISSUER:cbt-pulse-grid}
     access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:15m}
@@ -66,3 +72,9 @@ management:
     health:
       probes:
         enabled: true
+      show-details: never
+      show-components: never
+
+logging:
+  pattern:
+    level: "%5p [requestId:%X{requestId:-}]"

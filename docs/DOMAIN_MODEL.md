@@ -15,4 +15,4 @@ The following records describe the planned core domain. They are architectural p
 - **Answer** — a candidate response recorded for an attempt question.
 - **ProctorEvent** — a monitoring or anti-cheat event observed during an attempt.
 - **Result** — the scoring and grading outcome produced for an attempt.
-- **AuditLog** — an immutable record of a security-sensitive or operational action.
+- **AuditLog** — an immutable, institution-scoped record of a security-sensitive or operational action, including actor context, outcome, timestamp, request correlation, and sanitized metadata.

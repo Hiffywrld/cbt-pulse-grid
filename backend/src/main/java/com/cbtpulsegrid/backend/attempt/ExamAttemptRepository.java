@@ -39,4 +39,18 @@ interface ExamAttemptRepository extends JpaRepository<ExamAttempt, UUID> {
 			@Param("now") Instant now,
 			Pageable pageable
 	);
+
+	@Query(value = """
+			select attempt.*
+			from exam_attempts attempt
+			where attempt.status = 'IN_PROGRESS'
+			and attempt.expires_at <= :now
+			order by attempt.expires_at, attempt.id
+			limit :batchSize
+			for update of attempt skip locked
+			""", nativeQuery = true)
+	List<ExamAttempt> findExpiredForUpdate(
+			@Param("now") Instant now,
+			@Param("batchSize") int batchSize
+	);
 }

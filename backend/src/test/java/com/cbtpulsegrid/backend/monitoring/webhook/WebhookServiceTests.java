@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.identity.ApiConflictException;
 import com.cbtpulsegrid.backend.monitoring.MonitoringEventType;
 import com.cbtpulsegrid.backend.monitoring.api.MonitoringActor;
@@ -50,6 +51,8 @@ class WebhookServiceTests {
 	private WebhookUrlValidator urlValidator;
 	@Mock
 	private WebhookSigner signer;
+	@Mock
+	private AuditTrail auditTrail;
 
 	private WebhookService service;
 
@@ -62,7 +65,8 @@ class WebhookServiceTests {
 				urlValidator,
 				signer,
 				WebhookSecurityTests.properties(false),
-				Clock.fixed(NOW, ZoneOffset.UTC)
+				Clock.fixed(NOW, ZoneOffset.UTC),
+				auditTrail
 		);
 	}
 

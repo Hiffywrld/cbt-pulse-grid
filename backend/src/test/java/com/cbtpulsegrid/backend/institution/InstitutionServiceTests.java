@@ -3,6 +3,7 @@ package com.cbtpulsegrid.backend.institution;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.institution.api.CreateInstitutionRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +25,9 @@ class InstitutionServiceTests {
 
 	@Mock
 	private InstitutionRepository institutionRepository;
+
+	@Mock
+	private AuditTrail auditTrail;
 
 	@InjectMocks
 	private InstitutionService institutionService;

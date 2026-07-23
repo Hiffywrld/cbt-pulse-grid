@@ -4,6 +4,9 @@ import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.audit.AuditAction;
+import com.cbtpulsegrid.backend.audit.AuditResourceType;
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.institution.InstitutionService;
 import com.cbtpulsegrid.backend.questionbank.api.CreateSubjectRequest;
 import com.cbtpulsegrid.backend.questionbank.api.QuestionBankActor;
@@ -26,15 +29,18 @@ public class SubjectService {
 	private final SubjectRepository subjectRepository;
 	private final InstitutionService institutionService;
 	private final QuestionBankAuthorization authorization;
+	private final AuditTrail auditTrail;
 
 	public SubjectService(
 			SubjectRepository subjectRepository,
 			InstitutionService institutionService,
-			QuestionBankAuthorization authorization
+			QuestionBankAuthorization authorization,
+			AuditTrail auditTrail
 	) {
 		this.subjectRepository = subjectRepository;
 		this.institutionService = institutionService;
 		this.authorization = authorization;
+		this.auditTrail = auditTrail;
 	}
 
 	@Transactional
@@ -54,7 +60,15 @@ public class SubjectService {
 				SubjectStatus.ACTIVE
 		);
 		try {
-			return toResponse(subjectRepository.saveAndFlush(subject));
+			Subject saved = subjectRepository.saveAndFlush(subject);
+			auditTrail.record(
+					institutionId,
+					AuditAction.SUBJECT_CREATED,
+					AuditResourceType.SUBJECT,
+					saved.getId(),
+					java.util.Map.of("code", saved.getCode(), "status", saved.getStatus())
+			);
+			return toResponse(saved);
 		}
 		catch (DataIntegrityViolationException exception) {
 			throw new DuplicateKeyException("Subject code already exists", exception);
@@ -100,7 +114,9 @@ public class SubjectService {
 		subject.setName(request.name().trim());
 		subject.setDescription(normalizeDescription(request.description()));
 		try {
-			return toResponse(subjectRepository.saveAndFlush(subject));
+			Subject saved = subjectRepository.saveAndFlush(subject);
+			auditTrail.record(institutionId, AuditAction.SUBJECT_UPDATED, AuditResourceType.SUBJECT, id, java.util.Map.of());
+			return toResponse(saved);
 		}
 		catch (DataIntegrityViolationException exception) {
 			throw new DuplicateKeyException("Subject code already exists", exception);
@@ -113,7 +129,15 @@ public class SubjectService {
 		institutionService.requireActive(institutionId);
 		Subject subject = requireOwnedSubject(institutionId, id);
 		subject.setStatus(status);
-		return toResponse(subjectRepository.saveAndFlush(subject));
+		Subject saved = subjectRepository.saveAndFlush(subject);
+		auditTrail.record(
+				institutionId,
+				AuditAction.SUBJECT_STATUS_CHANGED,
+				AuditResourceType.SUBJECT,
+				id,
+				java.util.Map.of("status", status)
+		);
+		return toResponse(saved);
 	}
 
 	Subject requireOwnedSubject(UUID institutionId, UUID id) {

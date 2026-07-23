@@ -3,6 +3,7 @@ package com.cbtpulsegrid.backend.questionbank;
 import java.util.Set;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.institution.InstitutionService;
 import com.cbtpulsegrid.backend.questionbank.api.CreateSubjectRequest;
 import com.cbtpulsegrid.backend.questionbank.api.QuestionBankActor;
@@ -33,6 +34,8 @@ class SubjectServiceTests {
 
 	@Mock
 	private InstitutionService institutionService;
+	@Mock
+	private AuditTrail auditTrail;
 
 	private SubjectService subjectService;
 
@@ -41,7 +44,8 @@ class SubjectServiceTests {
 		subjectService = new SubjectService(
 				subjectRepository,
 				institutionService,
-				new QuestionBankAuthorization()
+				new QuestionBankAuthorization(),
+				auditTrail
 		);
 	}
 

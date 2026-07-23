@@ -16,6 +16,7 @@ import com.cbtpulsegrid.backend.attempt.AttemptMonitoringQuery;
 import com.cbtpulsegrid.backend.attempt.AttemptMonitoringQuery.AttemptPage;
 import com.cbtpulsegrid.backend.attempt.AttemptMonitoringQuery.AttemptView;
 import com.cbtpulsegrid.backend.attempt.AttemptStatus;
+import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.examination.MonitoringExamQuery;
 import com.cbtpulsegrid.backend.identity.ExaminationCandidateQuery;
 import com.cbtpulsegrid.backend.identity.ExaminationCandidateQuery.CandidateProfile;
@@ -88,6 +89,8 @@ class MonitoringServiceTests {
 	private MonitoringLiveUpdateNotifier liveUpdateNotifier;
 	@Mock
 	private WebhookOutboxService webhookOutboxService;
+	@Mock
+	private AuditTrail auditTrail;
 
 	private MonitoringService monitoringService;
 
@@ -104,6 +107,7 @@ class MonitoringServiceTests {
 				new MonitoringAuthorization(),
 				liveUpdateNotifier,
 				webhookOutboxService,
+				auditTrail,
 				Clock.fixed(NOW, ZoneOffset.UTC)
 		);
 	}

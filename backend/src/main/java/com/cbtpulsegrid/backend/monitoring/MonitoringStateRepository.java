@@ -30,6 +30,7 @@ interface MonitoringStateRepository extends JpaRepository<MonitoringState, UUID>
 			from monitoring_states state
 			join exam_attempts attempt on attempt.id = state.attempt_id
 			where attempt.status = 'IN_PROGRESS'
+			and attempt.expires_at > :now
 			and state.last_heartbeat_received_at is not null
 			and state.last_heartbeat_received_at < :cutoff
 			and state.heartbeat_outage_active = false
@@ -39,6 +40,7 @@ interface MonitoringStateRepository extends JpaRepository<MonitoringState, UUID>
 			""", nativeQuery = true)
 	List<MonitoringState> findTimedOutForUpdate(
 			@Param("cutoff") java.time.Instant cutoff,
+			@Param("now") java.time.Instant now,
 			@Param("batchSize") int batchSize
 	);
 }
