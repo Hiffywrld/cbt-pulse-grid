@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.UUID;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -26,9 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
 	private final AuthService authService;
+	private final CurrentUserProfileService currentUserProfileService;
 
-	public AuthController(AuthService authService) {
+	public AuthController(AuthService authService, CurrentUserProfileService currentUserProfileService) {
 		this.authService = authService;
+		this.currentUserProfileService = currentUserProfileService;
 	}
 
 	@PostMapping("/login")
@@ -72,7 +76,11 @@ public class AuthController {
 	@Operation(summary = "Get the authenticated user profile")
 	@SecurityRequirement(name = "bearerAuth")
 	@ApiResponses({
-			@ApiResponse(responseCode = "200", description = "Authenticated profile returned"),
+			@ApiResponse(
+					responseCode = "200",
+					description = "Authenticated profile returned with safe user and institution display fields",
+					content = @Content(schema = @Schema(implementation = CurrentUserResponse.class))
+			),
 			@ApiResponse(responseCode = "401", description = "Authentication is required")
 	})
 	public CurrentUserResponse me(@AuthenticationPrincipal Jwt jwt) {
@@ -80,9 +88,8 @@ public class AuthController {
 		UUID institutionId = institutionClaim == null ? null : UUID.fromString(institutionClaim);
 		List<String> roles = jwt.getClaimAsStringList("roles");
 
-		return new CurrentUserResponse(
+		return currentUserProfileService.get(
 				UUID.fromString(jwt.getSubject()),
-				jwt.getClaimAsString("email"),
 				institutionId,
 				roles == null ? List.of() : List.copyOf(roles)
 		);
