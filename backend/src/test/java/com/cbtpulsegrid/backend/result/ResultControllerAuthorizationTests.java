@@ -56,7 +56,21 @@ class ResultControllerAuthorizationTests {
 
 	@Test
 	@WithMockUser(roles = "INVIGILATOR")
-	void permitsInstitutionInvigilatorResults() {
+	void rejectsInvigilatorResultsAndCsvExport() {
+		UUID examId = UUID.randomUUID();
+		assertThrows(
+				AccessDeniedException.class,
+				() -> controller.summary(null, examId)
+		);
+		assertThrows(
+				AccessDeniedException.class,
+				() -> controller.export(null, examId, null, null, null)
+		);
+	}
+
+	@Test
+	@WithMockUser(roles = "EXAMINER")
+	void permitsInstitutionExaminerResults() {
 		UUID institutionId = UUID.randomUUID();
 		UUID examId = UUID.randomUUID();
 		ExamResultSummaryResponse expected = new ExamResultSummaryResponse(
@@ -72,7 +86,7 @@ class ResultControllerAuthorizationTests {
 		);
 		when(resultService.summary(any(ResultActor.class), eq(examId))).thenReturn(expected);
 
-		assertSame(expected, controller.summary(jwt("INVIGILATOR", institutionId), examId));
+		assertSame(expected, controller.summary(jwt("EXAMINER", institutionId), examId));
 	}
 
 	private static Jwt jwt(String role, UUID institutionId) {

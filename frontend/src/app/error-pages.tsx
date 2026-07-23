@@ -1,12 +1,14 @@
 import { ArrowLeft, Home, ShieldX } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '../components/ui/button'
-import { homeForUser } from '../features/auth/role-routing'
+import { primaryRoleFor } from './navigation'
+import { homeForUser, roleLabel } from '../features/auth/role-routing'
 import { useAuth } from '../features/auth/use-auth'
 
 export const UnauthorizedPage = () => {
   const { user } = useAuth()
-  return <main className="error-page"><span className="error-page__code">403</span><ShieldX size={44} aria-hidden="true" /><h1>This workspace is outside your role</h1><p>Your account is signed in, but it does not have access to this area.</p><Button icon={<ArrowLeft size={17} />} onClick={() => window.history.back()}>Go back</Button>{user ? <Link to={homeForUser(user)}>Return to your dashboard</Link> : null}</main>
+  const role = user ? roleLabel(primaryRoleFor(user)) : 'This account'
+  return <main className="error-page"><span className="error-page__code">403</span><ShieldX size={44} aria-hidden="true" /><h1>This workspace is outside your role</h1><p>{role} access does not include this area. Return to your authorized workspace to continue.</p><Button icon={<ArrowLeft size={17} />} onClick={() => window.history.back()}>Go back</Button>{user ? <Link to={homeForUser(user)}>Return to your dashboard</Link> : null}</main>
 }
 
 export const NotFoundPage = () => {

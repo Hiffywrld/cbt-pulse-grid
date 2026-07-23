@@ -70,7 +70,7 @@ export const ExamForm = ({ exam, subjects, onSubmit, onCancel }: {
     shuffleOptions: exam?.shuffleOptions ?? true,
     poolRules: exam?.poolRules.map(({ difficulty, questionCount, marksPerQuestion }) => ({ difficulty, questionCount, marksPerQuestion })) ?? [{ difficulty: 'MEDIUM', questionCount: 10, marksPerQuestion: 1 }],
   }
-  const { register, control, reset, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<Values>({
+  const { register, control, reset, handleSubmit, setError, watch, formState: { errors, isSubmitting } } = useForm<Values>({
     resolver: zodResolver(baseSchema),
     defaultValues: defaults,
   })
@@ -80,6 +80,9 @@ export const ExamForm = ({ exam, subjects, onSubmit, onCancel }: {
     setErrorMessage(null)
     if (!editing && !/^\d{6}$/.test(values.accessPin ?? '')) {
       setError('accessPin', { message: 'Enter exactly six digits' }); return
+    }
+    if (!editing && new Date(values.startsAt).getTime() < Date.now()) {
+      setError('startsAt', { message: 'Start time cannot be in the past' }); return
     }
     const body: ExamInput & { accessPin?: string } = {
       ...values,
@@ -95,6 +98,8 @@ export const ExamForm = ({ exam, subjects, onSubmit, onCancel }: {
       if (!applyApiFormErrors(failure, setError)) setErrorMessage(friendlyApiError(failure))
     }
   })
+  const localNow = toLocalInput(new Date().toISOString())
+  const selectedStart = watch('startsAt')
   return <form className="management-form exam-form" onSubmit={submit} noValidate>
     {error ? <Alert tone="error">{error}</Alert> : null}
     <div className="form-grid">
@@ -105,8 +110,8 @@ export const ExamForm = ({ exam, subjects, onSubmit, onCancel }: {
     <Textarea label="Candidate instructions" rows={4} {...register('instructions')} error={errors.instructions?.message} />
     <div className="form-grid form-grid--three">
       <Input label="Duration (minutes)" type="number" min="1" max="480" {...register('durationMinutes', { valueAsNumber: true })} error={errors.durationMinutes?.message} />
-      <Input label="Starts at" type="datetime-local" {...register('startsAt')} error={errors.startsAt?.message} />
-      <Input label="Ends at" type="datetime-local" {...register('endsAt')} error={errors.endsAt?.message} />
+      <Input label="Starts at" type="datetime-local" min={editing ? undefined : localNow} {...register('startsAt')} error={errors.startsAt?.message} />
+      <Input label="Ends at" type="datetime-local" min={selectedStart || (editing ? undefined : localNow)} {...register('endsAt')} error={errors.endsAt?.message} />
     </div>
     <div className="form-grid">
       {!editing ? <Input label="Six-digit access PIN" type="password" inputMode="numeric" maxLength={6} autoComplete="new-password" {...register('accessPin')} error={errors.accessPin?.message} hint="The PIN is hashed and never displayed again." /> : null}

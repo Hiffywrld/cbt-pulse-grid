@@ -33,8 +33,15 @@ public interface StudentExamQuery {
 			String instructions,
 			int durationMinutes,
 			Instant startsAt,
-			Instant endsAt
+			Instant endsAt,
+			BigDecimal maximumScore
 	) {
+		public StudentExamView(
+				UUID id, String code, String title, String instructions,
+				int durationMinutes, Instant startsAt, Instant endsAt
+		) {
+			this(id, code, title, instructions, durationMinutes, startsAt, endsAt, null);
+		}
 	}
 
 	record AttemptExamDefinition(

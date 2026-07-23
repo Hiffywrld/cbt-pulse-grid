@@ -126,7 +126,10 @@ class StudentExamQueryService implements StudentExamQuery {
 				exam.getInstructions(),
 				exam.getDurationMinutes(),
 				exam.getStartsAt(),
-				exam.getEndsAt()
+				exam.getEndsAt(),
+				exam.getPoolRules().stream()
+						.map(rule -> rule.getMarksPerQuestion().multiply(java.math.BigDecimal.valueOf(rule.getQuestionCount())))
+						.reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add)
 		);
 	}
 

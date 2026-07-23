@@ -31,6 +31,22 @@ describe('authentication API contract', () => {
     }
   })
 
+  it('uses narrow authenticated profile and password endpoints', async () => {
+    const request = vi.fn().mockResolvedValue({})
+    const api = createAuthApi({ request } as unknown as ApiClient)
+    request.mockResolvedValue({} as never)
+    await api.updateProfile({ firstName: 'Amina', lastName: 'Okafor', avatarKey: 'emerald-orbit' })
+    expect(request).toHaveBeenCalledWith('/api/v1/auth/profile', {
+      method: 'PUT',
+      body: { firstName: 'Amina', lastName: 'Okafor', avatarKey: 'emerald-orbit' },
+    })
+    await api.changePassword({ currentPassword: 'old', newPassword: 'new-password', confirmPassword: 'new-password' })
+    expect(request).toHaveBeenLastCalledWith('/api/v1/auth/change-password', {
+      method: 'POST',
+      body: { currentPassword: 'old', newPassword: 'new-password', confirmPassword: 'new-password' },
+    })
+  })
+
   it('sends the exact public login request and parses the token and profile responses', async () => {
     const responses = [tokens, profile]
     const receiverSensitiveFetch: typeof fetch = function (this: typeof globalThis) {

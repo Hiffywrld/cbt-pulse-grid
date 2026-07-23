@@ -20,11 +20,13 @@ class ExamSpecificationsTests {
 	@Test
 	void appliesTenantSubjectStatusAndCaseInsensitiveSearchPredicates() {
 		UUID institutionId = UUID.randomUUID();
+		UUID createdBy = UUID.randomUUID();
 		UUID subjectId = UUID.randomUUID();
 		Root<Exam> root = mock(Root.class);
 		CriteriaQuery<?> query = mock(CriteriaQuery.class);
 		CriteriaBuilder criteriaBuilder = mock(CriteriaBuilder.class);
 		Path<UUID> institutionPath = mock(Path.class);
+		Path<UUID> createdByPath = mock(Path.class);
 		Path<UUID> subjectPath = mock(Path.class);
 		Path<ExamStatus> statusPath = mock(Path.class);
 		Path<String> codePath = mock(Path.class);
@@ -32,6 +34,7 @@ class ExamSpecificationsTests {
 		Expression<String> loweredCode = mock(Expression.class);
 		Expression<String> loweredTitle = mock(Expression.class);
 		when(root.<UUID>get("institutionId")).thenReturn(institutionPath);
+		when(root.<UUID>get("createdBy")).thenReturn(createdByPath);
 		when(root.<UUID>get("subjectId")).thenReturn(subjectPath);
 		when(root.<ExamStatus>get("status")).thenReturn(statusPath);
 		when(root.<String>get("code")).thenReturn(codePath);
@@ -41,12 +44,14 @@ class ExamSpecificationsTests {
 
 		ExamSpecifications.filteredBy(
 				institutionId,
+				createdBy,
 				subjectId,
 				ExamStatus.DRAFT,
 				"  AlGeBrA  "
 		).toPredicate(root, query, criteriaBuilder);
 
 		verify(criteriaBuilder).equal(institutionPath, institutionId);
+		verify(criteriaBuilder).equal(createdByPath, createdBy);
 		verify(criteriaBuilder).equal(subjectPath, subjectId);
 		verify(criteriaBuilder).equal(statusPath, ExamStatus.DRAFT);
 		verify(criteriaBuilder).like(loweredCode, "%algebra%");

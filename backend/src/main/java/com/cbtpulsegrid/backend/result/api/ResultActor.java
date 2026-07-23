@@ -14,11 +14,12 @@ public record ResultActor(UUID userId, UUID institutionId, Set<String> roles) {
 	}
 
 	public boolean canReadStaffResults() {
-		return institutionId != null && roles.stream().anyMatch(Set.of(
-				"INSTITUTION_ADMIN",
-				"EXAMINER",
-				"INVIGILATOR"
-		)::contains);
+		return institutionId != null
+				&& (roles.contains("INSTITUTION_ADMIN") || roles.contains("EXAMINER"));
+	}
+
+	public boolean isExaminer() {
+		return roles.contains("EXAMINER") && !roles.contains("INSTITUTION_ADMIN");
 	}
 
 	public static ResultActor from(Jwt jwt) {

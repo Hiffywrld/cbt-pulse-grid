@@ -114,12 +114,31 @@ class MonitoringStompSecurityInterceptorTests {
 	}
 
 	@Test
-	void rejectsCrossInstitutionSubscription() {
+	void rejectsExaminerSubscription() {
 		Jwt jwt = jwt(INSTITUTION_ID, Set.of("EXAMINER"));
-		when(jwtDecoder.decode("staff-token")).thenReturn(jwt);
+		when(jwtDecoder.decode("examiner-token")).thenReturn(jwt);
 		when(principalQuery.findActive(USER_ID)).thenReturn(Optional.of(principal(
 				INSTITUTION_ID,
 				Set.of("EXAMINER")
+		)));
+		JwtAuthenticationToken authentication = connect("Bearer examiner-token");
+
+		assertThrows(
+				AccessDeniedException.class,
+				() -> interceptor.preSend(
+						subscribe(authentication, "/topic/exams/" + EXAM_ID + "/monitoring"),
+						mock(MessageChannel.class)
+				)
+		);
+	}
+
+	@Test
+	void rejectsCrossInstitutionSubscription() {
+		Jwt jwt = jwt(INSTITUTION_ID, Set.of("INVIGILATOR"));
+		when(jwtDecoder.decode("staff-token")).thenReturn(jwt);
+		when(principalQuery.findActive(USER_ID)).thenReturn(Optional.of(principal(
+				INSTITUTION_ID,
+				Set.of("INVIGILATOR")
 		)));
 		doThrow(new AccessDeniedException("cross tenant"))
 				.when(examQuery).requireExam(INSTITUTION_ID, EXAM_ID);

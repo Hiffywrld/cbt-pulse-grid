@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @RestController
 @RequestMapping("/api/v1/results")
-@PreAuthorize("hasAnyRole('INSTITUTION_ADMIN', 'EXAMINER', 'INVIGILATOR')")
+@PreAuthorize("hasAnyRole('INSTITUTION_ADMIN', 'EXAMINER')")
 @Tag(name = "Results", description = "Tenant-secured staff examination result reporting")
 @SecurityRequirement(name = "bearerAuth")
 public class ResultController {

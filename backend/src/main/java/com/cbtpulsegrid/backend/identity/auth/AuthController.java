@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PutMapping;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -93,5 +94,37 @@ public class AuthController {
 				institutionId,
 				roles == null ? List.of() : List.copyOf(roles)
 		);
+	}
+
+	@PutMapping("/profile")
+	@Operation(summary = "Update the authenticated user's safe profile fields")
+	@SecurityRequirement(name = "bearerAuth")
+	public CurrentUserResponse updateProfile(
+			@AuthenticationPrincipal Jwt jwt,
+			@Valid @RequestBody UpdateProfileRequest request
+	) {
+		return currentUserProfileService.update(
+				UUID.fromString(jwt.getSubject()), institutionId(jwt), roles(jwt), request);
+	}
+
+	@PostMapping("/change-password")
+	@Operation(summary = "Change password and revoke all refresh-token sessions")
+	@SecurityRequirement(name = "bearerAuth")
+	public ResponseEntity<Void> changePassword(
+			@AuthenticationPrincipal Jwt jwt,
+			@Valid @RequestBody ChangePasswordRequest request
+	) {
+		currentUserProfileService.changePassword(UUID.fromString(jwt.getSubject()), request);
+		return ResponseEntity.noContent().build();
+	}
+
+	private static UUID institutionId(Jwt jwt) {
+		String claim = jwt.getClaimAsString("institutionId");
+		return claim == null ? null : UUID.fromString(claim);
+	}
+
+	private static List<String> roles(Jwt jwt) {
+		List<String> roles = jwt.getClaimAsStringList("roles");
+		return roles == null ? List.of() : List.copyOf(roles);
 	}
 }

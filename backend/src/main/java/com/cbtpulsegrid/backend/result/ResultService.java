@@ -55,12 +55,14 @@ public class ResultService {
 	@Transactional(readOnly = true)
 	public ExamResultSummaryResponse summary(ResultActor actor, UUID examId) {
 		UUID institutionId = requireStaff(actor);
+		requireExamAccess(actor, examId, institutionId);
 		String sql = """
 				select exam.id,
 				       exam.code,
 				       exam.title,
 				       count(assignment.id) as assigned_candidates,
-				       count(assignment.id) filter (where attempt.id is null) as not_started,
+				       count(assignment.id) filter (where attempt.id is null and exam.ends_at > current_timestamp) as not_started,
+				       count(assignment.id) filter (where attempt.id is null and exam.ends_at <= current_timestamp) as absent,
 				       count(attempt.id) filter (where attempt.status = 'IN_PROGRESS') as in_progress,
 				       count(attempt.id) filter (where attempt.status = 'SUBMITTED') as submitted,
 				       count(attempt.id) filter (where attempt.status = 'AUTO_SUBMITTED') as auto_submitted,
@@ -131,6 +133,7 @@ public class ResultService {
 	) {
 		UUID institutionId = requireStaff(actor);
 		validatePage(page, size);
+		requireExamAccess(actor, examId, institutionId);
 		CandidateQuery query = candidateQuery(
 				examId,
 				institutionId,
@@ -138,7 +141,6 @@ public class ResultService {
 				status,
 				passed
 		);
-		ensureExamExists(examId, institutionId);
 		long total = jdbc.queryForObject(
 				"select count(*) " + CANDIDATE_FROM + query.whereClause(),
 				query.parameters(),
@@ -160,6 +162,7 @@ public class ResultService {
 	@Transactional(readOnly = true)
 	public StaffAttemptResultResponse attempt(ResultActor actor, UUID attemptId) {
 		UUID institutionId = requireStaff(actor);
+		requireAttemptAccess(actor, attemptId, institutionId);
 		String sql = """
 				select attempt.id as attempt_id,
 				       exam.id as exam_id,
@@ -234,7 +237,7 @@ public class ResultService {
 			Boolean passed
 	) {
 		UUID institutionId = requireStaff(actor);
-		ExamName exam = requireExam(examId, institutionId);
+		ExamName exam = requireExamAccess(actor, examId, institutionId);
 		CandidateQuery query = candidateQuery(
 				examId,
 				institutionId,
@@ -345,7 +348,10 @@ public class ResultService {
 			parameters.addValue("search", "%" + normalizedSearch + "%");
 		}
 		if (status == CandidateResultStatus.NOT_STARTED) {
-			where.append(" and attempt.id is null ");
+			where.append(" and attempt.id is null and exam.ends_at > current_timestamp ");
+		}
+		else if (status == CandidateResultStatus.ABSENT) {
+			where.append(" and attempt.id is null and exam.ends_at <= current_timestamp ");
 		}
 		else if (status != null) {
 			where.append(" and attempt.status = :status ");
@@ -366,14 +372,15 @@ public class ResultService {
 				       candidate.email,
 				       candidate.registration_number,
 				       attempt.id as attempt_id,
-				       coalesce(attempt.status, 'NOT_STARTED') as result_status,
-				       attempt.score,
+				       case when attempt.id is null and exam.ends_at <= current_timestamp
+				            then 'ABSENT' else coalesce(attempt.status, 'NOT_STARTED') end as result_status,
+				       case when attempt.id is null and exam.ends_at <= current_timestamp then 0 else attempt.score end as score,
 				       coalesce(attempt.maximum_score, (
 				           select coalesce(sum(rule.question_count * rule.marks_per_question), 0)
 				           from exam_pool_rules rule
 				           where rule.exam_id = exam.id
 				       ))::numeric as maximum_score,
-				       attempt.percentage,
+				       case when attempt.id is null and exam.ends_at <= current_timestamp then 0 else attempt.percentage end as percentage,
 				       attempt.passed,
 				       attempt.started_at,
 				       attempt.submitted_at
@@ -389,23 +396,48 @@ public class ResultService {
 				""";
 	}
 
-	private void ensureExamExists(UUID examId, UUID institutionId) {
-		requireExam(examId, institutionId);
-	}
-
-	private ExamName requireExam(UUID examId, UUID institutionId) {
+	private ExamName requireExamAccess(ResultActor actor, UUID examId, UUID institutionId) {
 		try {
-			return jdbc.queryForObject(
-					"select code, title from exams where id = :examId and institution_id = :institutionId",
+			ExamName exam = jdbc.queryForObject(
+					"select code, title, created_by from exams where id = :examId and institution_id = :institutionId",
 					Map.of("examId", examId, "institutionId", institutionId),
 					(resultSet, rowNumber) -> new ExamName(
 							resultSet.getString("code"),
-							resultSet.getString("title")
+							resultSet.getString("title"),
+							resultSet.getObject("created_by", UUID.class)
 					)
 			);
+			requireExaminerOwnership(actor, exam.createdBy());
+			return exam;
 		}
 		catch (EmptyResultDataAccessException exception) {
 			throw new NoSuchElementException("Exam not found");
+		}
+	}
+
+	private void requireAttemptAccess(ResultActor actor, UUID attemptId, UUID institutionId) {
+		try {
+			UUID createdBy = jdbc.queryForObject(
+					"""
+					select exam.created_by
+					from exam_attempts attempt
+					join exams exam on exam.id = attempt.exam_id
+					where attempt.id = :attemptId
+					  and attempt.institution_id = :institutionId
+					""",
+					Map.of("attemptId", attemptId, "institutionId", institutionId),
+					(resultSet, rowNumber) -> resultSet.getObject("created_by", UUID.class)
+			);
+			requireExaminerOwnership(actor, createdBy);
+		}
+		catch (EmptyResultDataAccessException exception) {
+			throw new NoSuchElementException("Attempt not found");
+		}
+	}
+
+	private static void requireExaminerOwnership(ResultActor actor, UUID createdBy) {
+		if (actor.isExaminer() && !actor.userId().equals(createdBy)) {
+			throw new AccessDeniedException("Examiner result access is limited to examinations they created");
 		}
 	}
 
@@ -430,6 +462,7 @@ public class ResultService {
 				resultSet.getString("title"),
 				resultSet.getLong("assigned_candidates"),
 				resultSet.getLong("not_started"),
+				resultSet.getLong("absent"),
 				resultSet.getLong("in_progress"),
 				resultSet.getLong("submitted"),
 				resultSet.getLong("auto_submitted"),
@@ -531,7 +564,7 @@ public class ResultService {
 	private record CandidateQuery(String whereClause, MapSqlParameterSource parameters) {
 	}
 
-	private record ExamName(String code, String title) {
+	private record ExamName(String code, String title, UUID createdBy) {
 	}
 
 	private record AttemptHeader(

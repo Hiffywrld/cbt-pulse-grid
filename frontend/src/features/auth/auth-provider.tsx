@@ -67,9 +67,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [navigate])
 
+  const refreshProfile = useCallback(async () => {
+    const profile = await authApi.me()
+    setUser(profile)
+    return profile
+  }, [])
+
   const value = useMemo(
-    () => ({ status, user, login, logout }),
-    [status, user, login, logout],
+    () => ({ status, user, login, logout, refreshProfile }),
+    [status, user, login, logout, refreshProfile],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

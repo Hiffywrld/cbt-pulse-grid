@@ -1,6 +1,6 @@
 import type { QuestionType } from './academic'
 
-export type CandidateResultStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'AUTO_SUBMITTED'
+export type CandidateResultStatus = 'NOT_STARTED' | 'ABSENT' | 'IN_PROGRESS' | 'SUBMITTED' | 'AUTO_SUBMITTED'
 
 export type ExamResultSummary = {
   examId: string
@@ -8,6 +8,7 @@ export type ExamResultSummary = {
   examTitle: string
   assignedCandidates: number
   notStarted: number
+  absent: number
   inProgress: number
   submitted: number
   autoSubmitted: number
@@ -82,4 +83,3 @@ export type StaffAttemptResult = {
   reviewAvailable: boolean
   questions: StaffQuestionReview[]
 }
-

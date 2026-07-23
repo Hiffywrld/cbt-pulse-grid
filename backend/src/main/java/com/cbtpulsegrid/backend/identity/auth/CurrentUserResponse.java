@@ -21,6 +21,15 @@ public record CurrentUserResponse(
 		String institutionName,
 		@Schema(nullable = true, description = "Institution code, or null for a platform-scoped account")
 		String institutionCode,
+		@Schema(nullable = true, description = "Allow-listed built-in avatar key")
+		String avatarKey,
 		List<String> roles
 ) {
+	public CurrentUserResponse(
+			UUID id, String email, String firstName, String lastName, String registrationNumber,
+			UUID institutionId, String institutionName, String institutionCode, List<String> roles
+	) {
+		this(id, email, firstName, lastName, registrationNumber, institutionId,
+				institutionName, institutionCode, null, roles);
+	}
 }

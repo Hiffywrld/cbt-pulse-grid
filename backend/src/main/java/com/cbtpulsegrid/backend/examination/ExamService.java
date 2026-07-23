@@ -151,6 +151,7 @@ public class ExamService {
 		Page<ExamSummaryResponse> result = examRepository.findAll(
 				ExamSpecifications.filteredBy(
 						institutionId,
+						actor.isExaminer() ? actor.userId() : null,
 						subjectId,
 						visibleStatus,
 						normalizeSearch(search)
@@ -174,6 +175,7 @@ public class ExamService {
 		UUID institutionId = authorization.requireManagementAccess(actor);
 		institutionService.requireActive(institutionId);
 		Exam exam = requireOwnedExamWithRules(institutionId, id);
+		authorization.requireManagementOwnership(actor, exam);
 		requireDraft(exam);
 		questionBankQuery.requireActiveSubject(institutionId, request.subjectId());
 		validateDefinition(
@@ -215,6 +217,7 @@ public class ExamService {
 		UUID institutionId = authorization.requireManagementAccess(actor);
 		institutionService.requireActive(institutionId);
 		Exam exam = requireOwnedExamWithRules(institutionId, id);
+		authorization.requireManagementOwnership(actor, exam);
 		try {
 			requireDraft(exam);
 			questionBankQuery.requireActiveSubject(institutionId, exam.getSubjectId());
@@ -268,6 +271,7 @@ public class ExamService {
 		UUID institutionId = authorization.requireManagementAccess(actor);
 		institutionService.requireActive(institutionId);
 		Exam exam = requireOwnedExamWithRules(institutionId, id);
+		authorization.requireManagementOwnership(actor, exam);
 		if (exam.getStatus() != ExamStatus.DRAFT && exam.getStatus() != ExamStatus.PUBLISHED) {
 			throw new IllegalArgumentException("Only DRAFT or PUBLISHED exams may be cancelled");
 		}
@@ -282,6 +286,7 @@ public class ExamService {
 		UUID institutionId = authorization.requireManagementAccess(actor);
 		institutionService.requireActive(institutionId);
 		Exam exam = requireOwnedExamWithRules(institutionId, id);
+		authorization.requireManagementOwnership(actor, exam);
 		if (exam.getStatus() != ExamStatus.PUBLISHED) {
 			throw new IllegalArgumentException("Only PUBLISHED exams may be closed");
 		}
@@ -296,6 +301,7 @@ public class ExamService {
 		UUID institutionId = authorization.requireManagementAccess(actor);
 		institutionService.requireActive(institutionId);
 		Exam exam = requireOwnedExamWithRules(institutionId, id);
+		authorization.requireManagementOwnership(actor, exam);
 		requireDraft(exam);
 		validatePin(accessPin);
 		exam.rotateAccessPin(passwordEncoder.encode(accessPin));
@@ -313,6 +319,7 @@ public class ExamService {
 		UUID institutionId = authorization.requireManagementAccess(actor);
 		institutionService.requireActive(institutionId);
 		Exam exam = requireOwnedExam(institutionId, id);
+		authorization.requireManagementOwnership(actor, exam);
 		requireDraft(exam);
 		Set<UUID> userIds = validateCandidateIds(request.userIds());
 		Map<UUID, CandidateProfile> profiles = candidateQuery.requireActiveStudents(institutionId, userIds);
@@ -376,6 +383,7 @@ public class ExamService {
 		UUID institutionId = authorization.requireManagementAccess(actor);
 		institutionService.requireActive(institutionId);
 		Exam exam = requireOwnedExam(institutionId, id);
+		authorization.requireManagementOwnership(actor, exam);
 		requireDraft(exam);
 		ExamCandidate assignment = examCandidateRepository.findByExamIdAndUserId(id, userId)
 				.orElseThrow(() -> new NoSuchElementException("Exam candidate assignment not found"));

@@ -2,9 +2,9 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { AppShell } from '../components/layout/app-shell'
 import { LoginPage } from '../features/auth/login-page'
+import { PublicHomePage } from '../features/auth/public-home-page'
 import { ProtectedRoute } from '../features/auth/protected-route'
 import { RoleRoute } from '../features/auth/role-route'
-import { homeForUser } from '../features/auth/role-routing'
 import { useAuth } from '../features/auth/use-auth'
 import { DashboardPage } from '../features/dashboard/dashboard-page'
 import { ExamDetailPage } from '../features/exams/exam-detail-page'
@@ -14,6 +14,7 @@ import { AuditPage } from '../features/audit/audit-page'
 import { MonitoringEventsPage } from '../features/monitoring/monitoring-events-page'
 import { MonitoringPage } from '../features/monitoring/monitoring-page'
 import { QuestionsPage } from '../features/questions/questions-page'
+import { ProfilePage } from '../features/profile/profile-page'
 import { AttemptReviewPage } from '../features/results/attempt-review-page'
 import { ExamResultsPage } from '../features/results/exam-results-page'
 import { ResultsPage } from '../features/results/results-page'
@@ -22,18 +23,13 @@ import { StudentAttemptResultPage } from '../features/student/student-attempt-re
 import { StudentExamDetailPage } from '../features/student/student-exam-detail-page'
 import { StudentExamStartPage } from '../features/student/student-exam-start-page'
 import { StudentExamsPage } from '../features/student/student-exams-page'
+import { StudentResultsPage } from '../features/student/student-results-page'
 import { SubjectsPage } from '../features/subjects/subjects-page'
 import { UsersPage } from '../features/users/users-page'
 import { WebhooksPage } from '../features/webhooks/webhooks-page'
 import type { Role } from '../types/auth'
 import { NotFoundPage, UnauthorizedPage } from './error-pages'
 import { PlaceholderPage } from './placeholder-page'
-
-const RootRedirect = () => {
-  const { status, user } = useAuth()
-  if (status === 'restoring') return null
-  return <Navigate to={status === 'authenticated' && user ? homeForUser(user) : '/login'} replace />
-}
 
 const placeholders = {
   institutions: ['Institutions', 'Create and manage institutional tenants.'], users: ['User accounts', 'Manage institution-scoped staff and student accounts.'], subjects: ['Subjects', 'Organize the institution question bank by subject.'], questions: ['Question bank', 'Create and publish validated examination questions.'], exams: ['Examinations', 'Configure schedules, pools, candidates and exam lifecycle.'], monitoring: ['Live monitoring', 'Observe candidate connectivity and anti-cheat signals.'], results: ['Results', 'Review secure assessment outcomes and exports.'], audit: ['Audit trail', 'Review immutable operational and security events.'], studentExams: ['My examinations', 'View assigned examinations and availability.'], studentResults: ['My results', 'View your submitted examination outcomes.'],
@@ -51,10 +47,11 @@ const RoleOnly = ({ roles, page, element }: { roles: readonly Role[]; page?: key
 
 export const AppRoutes = () => (
   <Routes>
-    <Route path="/" element={<RootRedirect />} />
+    <Route path="/" element={<PublicHomePage />} />
     <Route path="/login" element={<LoginPage />} />
     <Route element={<ProtectedRoute />}>
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
+      <Route element={<AppShell />}><Route path="/profile" element={<ProfilePage />} /></Route>
       <Route element={<RoleRoute roles={['SUPER_ADMIN']} />}><Route element={<AppShell />}><Route path="/platform" element={<DashboardPage area="platform" />} /><Route path="/platform/institutions" element={<InstitutionsPage />} /><Route path="/platform/administrators" element={<UsersPage mode="platform-admins" />} /></Route></Route>
       <Route element={<RoleRoute roles={['INSTITUTION_ADMIN', 'EXAMINER', 'INVIGILATOR']} />}>
         <Route element={<AppShell />}>
@@ -64,17 +61,17 @@ export const AppRoutes = () => (
           <Route path="/institution/questions" element={<RoleOnly roles={['INSTITUTION_ADMIN', 'EXAMINER']} element={<QuestionsPage />} />} />
           <Route path="/institution/exams" element={<ExamsPage />} />
           <Route path="/institution/exams/:examId" element={<ExamDetailPage />} />
-          <Route path="/institution/monitoring" element={<MonitoringPage />} />
-          <Route path="/institution/monitoring/attempts/:attemptId" element={<MonitoringEventsPage />} />
-          <Route path="/institution/results" element={<ResultsPage />} />
-          <Route path="/institution/results/exams/:examId" element={<ExamResultsPage />} />
-          <Route path="/institution/results/attempts/:attemptId" element={<AttemptReviewPage />} />
+          <Route path="/institution/monitoring" element={<RoleOnly roles={['INSTITUTION_ADMIN', 'INVIGILATOR']} element={<MonitoringPage />} />} />
+          <Route path="/institution/monitoring/attempts/:attemptId" element={<RoleOnly roles={['INSTITUTION_ADMIN', 'INVIGILATOR']} element={<MonitoringEventsPage />} />} />
+          <Route path="/institution/results" element={<RoleOnly roles={['INSTITUTION_ADMIN', 'EXAMINER']} element={<ResultsPage />} />} />
+          <Route path="/institution/results/exams/:examId" element={<RoleOnly roles={['INSTITUTION_ADMIN', 'EXAMINER']} element={<ExamResultsPage />} />} />
+          <Route path="/institution/results/attempts/:attemptId" element={<RoleOnly roles={['INSTITUTION_ADMIN', 'EXAMINER']} element={<AttemptReviewPage />} />} />
           <Route path="/institution/audit" element={<RoleOnly roles={['INSTITUTION_ADMIN']} element={<AuditPage />} />} />
           <Route path="/institution/webhooks" element={<RoleOnly roles={['INSTITUTION_ADMIN']} element={<WebhooksPage />} />} />
         </Route>
       </Route>
       <Route element={<RoleRoute roles={['STUDENT']} />}>
-        <Route element={<AppShell />}><Route path="/student" element={<DashboardPage area="student" />} /><Route path="/student/exams" element={<StudentExamsPage />} /><Route path="/student/exams/:examId" element={<StudentExamDetailPage />} /><Route path="/student/exams/:examId/start" element={<StudentExamStartPage />} /></Route>
+        <Route element={<AppShell />}><Route path="/student" element={<DashboardPage area="student" />} /><Route path="/student/exams" element={<StudentExamsPage />} /><Route path="/student/exams/:examId" element={<StudentExamDetailPage />} /><Route path="/student/exams/:examId/start" element={<StudentExamStartPage />} /><Route path="/student/results" element={<StudentResultsPage />} /></Route>
         <Route path="/student/attempts/:attemptId" element={<StudentAttemptPage />} />
         <Route element={<AppShell />}><Route path="/student/attempts/:attemptId/result" element={<StudentAttemptResultPage />} /></Route>
       </Route>

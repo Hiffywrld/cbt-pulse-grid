@@ -30,9 +30,14 @@ class ExamAuthorization {
 	}
 
 	void requireReadableStatus(ExamActor actor, Exam exam) {
+		requireExamOwnership(actor, exam);
 		if (!actor.canManage() && actor.isInvigilator() && exam.getStatus() != ExamStatus.PUBLISHED) {
 			throw new AccessDeniedException("Invigilators may read only PUBLISHED exams");
 		}
+	}
+
+	void requireManagementOwnership(ExamActor actor, Exam exam) {
+		requireExamOwnership(actor, exam);
 	}
 
 	ExamStatus resolveListStatus(ExamActor actor, ExamStatus requestedStatus) {
@@ -50,5 +55,11 @@ class ExamAuthorization {
 			throw new AccessDeniedException("Institution context is required");
 		}
 		return actor.institutionId();
+	}
+
+	private static void requireExamOwnership(ExamActor actor, Exam exam) {
+		if (actor.isExaminer() && !actor.userId().equals(exam.getCreatedBy())) {
+			throw new AccessDeniedException("Examiner access is limited to examinations they created");
+		}
 	}
 }

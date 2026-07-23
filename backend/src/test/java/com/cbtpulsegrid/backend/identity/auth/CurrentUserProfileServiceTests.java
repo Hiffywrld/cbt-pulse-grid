@@ -9,10 +9,13 @@ import com.cbtpulsegrid.backend.identity.UserRepository;
 import com.cbtpulsegrid.backend.identity.UserStatus;
 import com.cbtpulsegrid.backend.institution.InstitutionProfile;
 import com.cbtpulsegrid.backend.institution.InstitutionProfileQuery;
+import com.cbtpulsegrid.backend.identity.RefreshTokenRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -22,7 +25,10 @@ class CurrentUserProfileServiceTests {
 
 	private final UserRepository userRepository = mock(UserRepository.class);
 	private final InstitutionProfileQuery institutionProfileQuery = mock(InstitutionProfileQuery.class);
-	private final CurrentUserProfileService service = new CurrentUserProfileService(userRepository, institutionProfileQuery);
+	private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
+	private final RefreshTokenRepository refreshTokenRepository = mock(RefreshTokenRepository.class);
+	private final CurrentUserProfileService service = new CurrentUserProfileService(
+			userRepository, institutionProfileQuery, passwordEncoder, refreshTokenRepository);
 
 	@Test
 	void returnsHumanFriendlyIdentityAndInstitutionForInstitutionUser() {
@@ -50,6 +56,39 @@ class CurrentUserProfileServiceTests {
 		assertEquals("NIIT Lagos Campus", response.institutionName());
 		assertEquals("NIIT-LAGOS", response.institutionCode());
 		assertEquals(List.of("INSTITUTION_ADMIN"), response.roles());
+	}
+
+	@Test
+	void updatesOnlySafeProfileFieldsAndPersistsAllowListedAvatar() {
+		UUID userId = UUID.randomUUID();
+		User user = new User("Old", "Name", "fixed@example.test", "hash", UserStatus.ACTIVE);
+		when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+		CurrentUserResponse response = service.update(
+				userId, null, List.of("SUPER_ADMIN"),
+				new UpdateProfileRequest("Amina", "Okafor", "emerald-orbit"));
+
+		assertEquals("Amina", user.getFirstName());
+		assertEquals("Okafor", user.getLastName());
+		assertEquals("emerald-orbit", response.avatarKey());
+		assertEquals("fixed@example.test", user.getEmail());
+	}
+
+	@Test
+	void rejectsUnknownAvatarAndVerifiesCurrentPasswordBeforeChangingIt() {
+		UUID userId = UUID.randomUUID();
+		User user = new User("Amina", "Okafor", "fixed@example.test", "old-hash", UserStatus.ACTIVE);
+		when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+		assertThrows(IllegalArgumentException.class, () -> service.update(
+				userId, null, List.of("SUPER_ADMIN"),
+				new UpdateProfileRequest("Amina", "Okafor", "remote-url")));
+
+		when(passwordEncoder.matches("current", "old-hash")).thenReturn(true);
+		when(passwordEncoder.encode("NewStrong1!")).thenReturn("new-hash");
+		service.changePassword(userId, new ChangePasswordRequest("current", "NewStrong1!", "NewStrong1!"));
+		assertEquals("new-hash", user.getPasswordHash());
+		verify(refreshTokenRepository).revokeAllByUserId(
+				org.mockito.ArgumentMatchers.eq(userId), org.mockito.ArgumentMatchers.any());
 	}
 
 	@Test

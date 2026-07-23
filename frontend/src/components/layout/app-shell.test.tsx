@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
 import { AuthContext } from '../../features/auth/auth-context'
 import { ThemeProvider } from '../../features/theme/theme-provider'
 import type { CurrentUser } from '../../types/auth'
@@ -18,7 +19,8 @@ const institutionAdmin: CurrentUser = {
 }
 
 describe('AppShell authenticated identity', () => {
-  it('shows the full name, business role, and institution without a raw UUID', () => {
+  it('shows the full name, business role, and institution without a raw UUID', async () => {
+    const user = userEvent.setup()
     render(
       <ThemeProvider>
         <AuthContext.Provider value={{ status: 'authenticated', user: institutionAdmin, login: vi.fn(), logout: vi.fn() }}>
@@ -35,6 +37,7 @@ describe('AppShell authenticated identity', () => {
     expect(screen.getByText('Institution Administrator')).toBeInTheDocument()
     expect(screen.getByText('NIIT Lagos Campus')).toBeInTheDocument()
     expect(screen.getByText('NIIT-LAGOS')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Open user menu' }))
     expect(screen.getByRole('combobox', { name: 'Color theme' })).toBeInTheDocument()
     expect(screen.queryByText(institutionAdmin.institutionId as string)).not.toBeInTheDocument()
   })

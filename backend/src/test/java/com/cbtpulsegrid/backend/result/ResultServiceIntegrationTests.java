@@ -165,6 +165,22 @@ class ResultServiceIntegrationTests {
 		);
 	}
 
+	@Test
+	void examinerResultsAreLimitedToExamsTheyCreated() {
+		ResultActor otherExaminer = new ResultActor(UUID.randomUUID(), institutionId, Set.of("EXAMINER"));
+
+		assertThrows(AccessDeniedException.class, () -> resultService.summary(otherExaminer, examId));
+		assertThrows(
+				AccessDeniedException.class,
+				() -> resultService.candidates(otherExaminer, examId, null, null, null, 0, 20)
+		);
+		assertThrows(AccessDeniedException.class, () -> resultService.attempt(otherExaminer, submittedAttemptId));
+		assertThrows(
+				AccessDeniedException.class,
+				() -> resultService.exportCsv(otherExaminer, examId, null, null, null)
+		);
+	}
+
 	private UUID insertCandidate(String registrationNumber, String firstName, String lastName) {
 		UUID userId = UUID.randomUUID();
 		insertUser(
@@ -294,8 +310,8 @@ class ResultServiceIntegrationTests {
 		);
 	}
 
-	private static ResultActor staff(UUID institutionId) {
-		return new ResultActor(UUID.randomUUID(), institutionId, Set.of("EXAMINER"));
+	private ResultActor staff(UUID institutionId) {
+		return new ResultActor(creatorId, institutionId, Set.of("EXAMINER"));
 	}
 
 	private static Timestamp ts(Instant instant) {

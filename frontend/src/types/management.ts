@@ -45,7 +45,12 @@ export type StudentExamSummary = {
   durationMinutes: number
   startsAt: string
   endsAt: string
-  availability: ExamAvailability
+    availability: ExamAvailability
+    participationStatus?: 'ABSENT' | 'IN_PROGRESS' | 'SUBMITTED' | 'AUTO_SUBMITTED' | null
+    score?: number | null
+    maximumScore?: number | null
+    percentage?: number | null
+    passed?: boolean | null
 }
 
 export type StudentExamDetail = StudentExamSummary & { instructions: string | null }

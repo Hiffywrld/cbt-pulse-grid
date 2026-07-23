@@ -16,6 +16,7 @@ final class ExamSpecifications {
 
 	static Specification<Exam> filteredBy(
 			UUID institutionId,
+			UUID createdBy,
 			UUID subjectId,
 			ExamStatus status,
 			String search
@@ -23,6 +24,9 @@ final class ExamSpecifications {
 		return (root, query, criteriaBuilder) -> {
 			List<Predicate> predicates = new ArrayList<>();
 			predicates.add(criteriaBuilder.equal(root.get("institutionId"), institutionId));
+			if (createdBy != null) {
+				predicates.add(criteriaBuilder.equal(root.get("createdBy"), createdBy));
+			}
 			if (subjectId != null) {
 				predicates.add(criteriaBuilder.equal(root.get("subjectId"), subjectId));
 			}

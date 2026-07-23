@@ -73,6 +73,15 @@ class MonitoringControllerAuthorizationTests {
 	}
 
 	@Test
+	@WithMockUser(roles = "EXAMINER")
+	void rejectsExaminersFromStaffMonitoringReads() {
+		assertThrows(
+				AccessDeniedException.class,
+				() -> staffController.dashboard(null, UUID.randomUUID(), 0, 20)
+		);
+	}
+
+	@Test
 	@WithMockUser(roles = "SUPER_ADMIN")
 	void rejectsSuperAdminFromInstitutionMonitoring() {
 		assertThrows(

@@ -8,6 +8,7 @@ export type AuthContextValue = {
   user: CurrentUser | null
   login(request: LoginRequest): Promise<CurrentUser>
   logout(): Promise<void>
+  refreshProfile?(): Promise<CurrentUser>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

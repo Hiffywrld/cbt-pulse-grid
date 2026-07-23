@@ -94,15 +94,25 @@ public class AttemptService {
 		requireActiveStudent(actor);
 		Instant now = clock.instant();
 		return examQuery.findAssignedPublishedExams(actor.institutionId(), actor.userId()).stream()
-				.map(exam -> new StudentExamSummaryResponse(
+				.map(exam -> {
+					ExamAttempt attempt = attemptRepository.findByExamIdAndCandidateId(exam.id(), actor.userId()).orElse(null);
+					String participation = attempt == null
+							? (now.isBefore(exam.endsAt()) ? null : "ABSENT")
+							: attempt.getStatus().name();
+					return new StudentExamSummaryResponse(
 						exam.id(),
 						exam.code(),
 						exam.title(),
 						exam.durationMinutes(),
 						exam.startsAt(),
 						exam.endsAt(),
-						availability(exam, now)
-				))
+						availability(exam, now),
+						participation,
+						attempt == null && "ABSENT".equals(participation) ? java.math.BigDecimal.ZERO : attempt == null ? null : attempt.getScore(),
+						attempt == null && "ABSENT".equals(participation) ? exam.maximumScore() : attempt == null ? null : attempt.getMaximumScore(),
+						attempt == null && "ABSENT".equals(participation) ? java.math.BigDecimal.ZERO : attempt == null ? null : attempt.getPercentage(),
+						attempt == null ? null : attempt.getPassed()
+				); })
 				.toList();
 	}
 

@@ -21,6 +21,10 @@ public record ExamActor(
 		return roles.contains("INSTITUTION_ADMIN") || roles.contains("EXAMINER");
 	}
 
+	public boolean isExaminer() {
+		return roles.contains("EXAMINER") && !roles.contains("INSTITUTION_ADMIN");
+	}
+
 	public boolean isInvigilator() {
 		return roles.contains("INVIGILATOR");
 	}

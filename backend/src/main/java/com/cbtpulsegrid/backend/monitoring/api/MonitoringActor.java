@@ -23,7 +23,6 @@ public record MonitoringActor(
 
 	public boolean isStaff() {
 		return roles.contains("INSTITUTION_ADMIN")
-				|| roles.contains("EXAMINER")
 				|| roles.contains("INVIGILATOR");
 	}
 

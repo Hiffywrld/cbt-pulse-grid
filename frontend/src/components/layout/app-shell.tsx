@@ -1,25 +1,20 @@
-import { ChevronLeft, ChevronRight, LogOut, Menu, PanelLeftClose, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Menu, PanelLeftClose, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { navigationFor, primaryRoleFor } from '../../app/navigation'
-import { fullNameFor, institutionCodeFor, institutionNameFor } from '../../features/auth/identity-display'
-import { roleLabel } from '../../features/auth/role-routing'
+import { navigationFor } from '../../app/navigation'
+import { institutionCodeFor, institutionNameFor } from '../../features/auth/identity-display'
 import { useAuth } from '../../features/auth/use-auth'
-import { ThemeControl } from '../../features/theme/theme-control'
-import { Badge } from '../ui/badge'
-import { Button } from '../ui/button'
 import { Brand } from './brand'
+import { UserMenu } from './user-menu'
 
 export const AppShell = () => {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   if (!user) return null
   const navigation = navigationFor(user)
   const current = [...navigation].sort((a, b) => b.to.length - a.to.length).find((item) => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`))
-  const primaryRole = primaryRoleFor(user)
-  const fullName = fullNameFor(user)
   const institutionName = institutionNameFor(user)
   const institutionCode = institutionCodeFor(user)
   const sidebar = (
@@ -44,7 +39,7 @@ export const AppShell = () => {
         <header className="topbar">
           <button className="icon-button topbar__menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={21} /></button>
           <div className="topbar__crumbs"><span>Workspace</span><ChevronRight size={14} /><strong>{current?.label ?? 'Overview'}</strong></div>
-          <div className="topbar__user"><ThemeControl /><div className="topbar__identity"><span className="avatar">{fullName.slice(0, 1).toUpperCase()}</span><span><strong>{fullName}</strong><small>{roleLabel(primaryRole)}</small></span></div><Badge tone="success">Active</Badge><Button variant="ghost" size="sm" icon={<LogOut size={17} />} onClick={() => void logout()}>Log out</Button></div>
+          <div className="topbar__user"><UserMenu /></div>
         </header>
         <div className="app-content"><Outlet /></div>
       </div>

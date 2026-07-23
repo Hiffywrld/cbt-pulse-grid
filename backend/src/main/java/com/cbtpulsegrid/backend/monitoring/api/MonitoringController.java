@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @RestController
 @RequestMapping("/api/v1/monitoring")
-@PreAuthorize("hasAnyRole('INSTITUTION_ADMIN', 'EXAMINER', 'INVIGILATOR')")
+@PreAuthorize("hasAnyRole('INSTITUTION_ADMIN', 'INVIGILATOR')")
 @Tag(name = "Exam Monitoring", description = "Tenant-scoped invigilation dashboards and persisted event history")
 @SecurityRequirement(name = "bearerAuth")
 public class MonitoringController {

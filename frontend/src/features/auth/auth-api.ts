@@ -5,6 +5,8 @@ import type {
   LoginRequest,
   LogoutRequest,
   TokenResponse,
+  UpdateProfileRequest,
+  ChangePasswordRequest,
 } from '../../types/auth'
 
 export const createAuthApi = (client: ApiClient) => ({
@@ -17,6 +19,12 @@ export const createAuthApi = (client: ApiClient) => ({
   },
   me() {
     return client.request<CurrentUser>('/api/v1/auth/me')
+  },
+  updateProfile(request: UpdateProfileRequest) {
+    return client.request<CurrentUser>('/api/v1/auth/profile', { method: 'PUT', body: request })
+  },
+  changePassword(request: ChangePasswordRequest) {
+    return client.request<void>('/api/v1/auth/change-password', { method: 'POST', body: request })
   },
   logout(request: LogoutRequest) {
     return client.request<void>('/api/v1/auth/logout', {

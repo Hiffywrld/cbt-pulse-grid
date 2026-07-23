@@ -14,6 +14,7 @@ import { Select } from '../../components/ui/select'
 import { friendlyApiError } from '../../lib/api/form-errors'
 import { auditActions, auditResourceTypes, type AuditEvent } from '../../types/operations'
 import { auditApi, type AuditFilters } from './audit-api'
+import { validateHistoricalRange } from '../../lib/date-ranges'
 
 const label = (value: string) => value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (character) => character.toUpperCase())
 
@@ -21,9 +22,17 @@ export const AuditPage = () => {
   const [page, setPage] = useState(0)
   const [draft, setDraft] = useState({ action: '', resourceType: '', actorId: '', from: '', to: '' })
   const [filters, setFilters] = useState<Omit<AuditFilters, 'page' | 'size'>>({})
+  const [dateError, setDateError] = useState('')
+  const [nowLocal] = useState(() => {
+    const now = new Date()
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+  })
   const [detail, setDetail] = useState<AuditEvent | null>(null)
   const query = useQuery({ queryKey: ['audit', filters, page], queryFn: () => auditApi.list({ ...filters, page, size: 20 }) })
   const apply = () => {
+    const invalid = validateHistoricalRange(draft.from, draft.to, Date.now())
+    if (invalid) { setDateError(invalid); return }
+    setDateError('')
     setFilters({
       action: draft.action || undefined, resourceType: draft.resourceType || undefined,
       actorId: draft.actorId.trim() || undefined,
@@ -32,15 +41,17 @@ export const AuditPage = () => {
     })
     setPage(0)
   }
+  const clear = () => { setDraft({ action: '', resourceType: '', actorId: '', from: '', to: '' }); setFilters({}); setDateError(''); setPage(0) }
   return <div>
     <PageHeader eyebrow="Institution governance" title="Immutable audit trail" description="Review tenant-scoped administrative and security actions. Audit records cannot be edited or deleted." />
-    <Card className="audit-filters">
+    <Card className="filter-toolbar audit-filters">
       <Select id="audit-action" label="Action" value={draft.action} onChange={(event) => setDraft({ ...draft, action: event.target.value })}><option value="">All actions</option>{auditActions.map((item) => <option key={item} value={item}>{label(item)}</option>)}</Select>
       <Select id="audit-resource" label="Resource" value={draft.resourceType} onChange={(event) => setDraft({ ...draft, resourceType: event.target.value })}><option value="">All resources</option>{auditResourceTypes.map((item) => <option key={item} value={item}>{label(item)}</option>)}</Select>
       <Input id="audit-actor" label="Actor ID" value={draft.actorId} onChange={(event) => setDraft({ ...draft, actorId: event.target.value })} />
-      <Input id="audit-from" label="From" type="datetime-local" value={draft.from} onChange={(event) => setDraft({ ...draft, from: event.target.value })} />
-      <Input id="audit-to" label="To" type="datetime-local" value={draft.to} onChange={(event) => setDraft({ ...draft, to: event.target.value })} />
-      <Button icon={<Search size={16} />} onClick={apply}>Apply filters</Button>
+      <Input id="audit-from" label="From" type="datetime-local" max={draft.to || nowLocal} value={draft.from} onChange={(event) => setDraft({ ...draft, from: event.target.value })} />
+      <Input id="audit-to" label="To" type="datetime-local" min={draft.from || undefined} max={nowLocal} value={draft.to} onChange={(event) => setDraft({ ...draft, to: event.target.value })} />
+      <div className="filter-toolbar__actions"><Button icon={<Search size={16} />} onClick={apply}>Apply filters</Button><Button variant="secondary" onClick={clear}>Clear filters</Button></div>
+      {dateError && <p className="filter-toolbar__error" role="alert">{dateError}</p>}
     </Card>
     {query.isPending ? <LoadingSkeleton /> : query.isError ? <EmptyState title="Audit events could not be loaded" description={friendlyApiError(query.error)} /> : query.data.content.length === 0 ? <EmptyState title="No audit events found" description="No immutable records match the supported filters." /> : <>
       <Card className="responsive-data"><table><thead><tr><th>Time</th><th>Action</th><th>Resource</th><th>Actor</th><th>Outcome</th><th><span className="sr-only">Details</span></th></tr></thead><tbody>

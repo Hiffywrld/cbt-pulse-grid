@@ -17,9 +17,10 @@ Phase 1 provides authentication, session restoration, route protection, navigati
 | Subjects | No | Manage | Read | No | No |
 | Question bank | No | Manage | Manage | No | No |
 | Staff exam management | No | Manage | Manage | Read published details/candidates | No |
-| Live monitoring | No | Institution staff view | Institution staff view | Institution staff view | No |
-| Staff results | No | View/export | View/export | View/export | No |
+| Live monitoring | No | Institution staff view | No | Institution staff view | No |
+| Staff results | No | View/export | View/export for owned exams | No | No |
 | Audit history | No | View within institution | No | No | No |
+| Webhook administration | No | Manage within institution | No | No | No |
 | Student dashboard | No | No | No | No | Full |
 | Assigned exams and attempts | No | No | No | No | Own assignments/attempts only |
 | Student results | No | No | No | No | Own submitted result only |
@@ -103,3 +104,11 @@ Institution staff results use the tenant-secured summary, candidate page, attemp
 Phase 5 connects institution operations to the existing monitoring, audit and webhook contracts. Authorized institution staff can select a published examination, reconcile its REST monitoring dashboard with authenticated STOMP updates from `/ws`, and inspect paginated attempt events. The client supplies the current bearer access token only in the STOMP `CONNECT` header and subscribes to `/topic/exams/{examId}/monitoring`; it never sends application messages over STOMP. Connection loss triggers bounded REST reconciliation and subscriptions are disposed when the screen or session closes.
 
 Institution administrators can review the immutable tenant audit trail using only backend-supported action, resource, actor UUID and time filters. They can also administer webhook subscriptions and delivery retries when the backend feature is enabled. Signing secrets are shown only in transient local dialog state after creation or rotation, can be copied only by an explicit user action, and are cleared when the dialog closes. They are never placed in storage, URLs, query caches, logs or notifications.
+
+## Final experience, profile and absence policy
+
+The public `/` route explains the platform without public registration, fabricated statistics or remote assets. Authentication remains at `/login`; authenticated visitors can open their role-specific dashboard. The authenticated top bar provides one accessible account menu for profile, dashboard, theme, help and logout actions.
+
+Every authenticated role can update only first name, last name and one allow-listed built-in avatar. Email, institution, registration number, roles and account status remain administrator-controlled. Password changes require the current password and matching confirmation, then revoke every refresh-token session.
+
+An assigned candidate who has no attempt after the examination end time is **Absent**. Absence is derived from the assignment and server-side examination window; no fake attempt is inserted. An absent candidate has a reporting score and percentage of zero against the examination’s obtainable marks, while pass/fail remains unset so absence is never treated as failure. Submitted and automatically submitted attempts retain the existing pass-rate calculation, and absence is reported separately from not-started, failed and passed counts.

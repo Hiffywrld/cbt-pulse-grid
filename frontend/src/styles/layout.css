@@ -63,7 +63,7 @@
 .app-shell--collapsed .sidebar__nav a, .app-shell--collapsed .sidebar__security, .app-shell--collapsed .sidebar__collapse { justify-content: center; }
 .app-shell--collapsed .sidebar__context { justify-content: center; }
 .app-shell__main { min-width: 0; }
-.topbar { height: 76px; position: sticky; top: 0; z-index: 15; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 clamp(20px, 3vw, 42px); border-bottom: 1px solid var(--color-border); background: var(--color-header-background); backdrop-filter: blur(14px); }
+.topbar { height: 76px; position: sticky; top: 0; z-index: 35; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 clamp(20px, 3vw, 42px); border-bottom: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent); background: var(--color-header-background); box-shadow: 0 8px 28px color-mix(in srgb, var(--color-modal-overlay) 8%, transparent); backdrop-filter: blur(16px) saturate(125%); }
 .topbar__menu { display: none; }
 .topbar__crumbs { display: flex; align-items: center; gap: 7px; color: var(--color-text-tertiary); font-size: .75rem; }
 .topbar__crumbs strong { color: var(--color-text-secondary); }
@@ -74,6 +74,27 @@
 .topbar__identity strong { max-width: 220px; overflow: hidden; color: var(--color-text-secondary); font-size: .75rem; text-overflow: ellipsis; }
 .topbar__identity small { color: var(--color-text-tertiary); font-size: .65rem; }
 .avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: var(--color-primary); background: var(--color-primary-soft); font-size: .8rem; font-weight: 850; }
+.user-menu { position: relative; }
+.user-menu__trigger { display: flex; align-items: center; gap: 9px; padding: 5px 7px; border: 1px solid transparent; border-radius: 11px; color: var(--color-text-secondary); background: transparent; cursor: pointer; }
+.user-menu__trigger:hover, .user-menu__trigger[aria-expanded="true"] { border-color: var(--color-border); background: var(--color-surface-elevated); }
+.user-menu__trigger > span:last-child { display: grid; text-align: left; }
+.user-menu__trigger strong { max-width: 190px; overflow: hidden; font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.user-menu__trigger small { color: var(--color-text-tertiary); font-size: .64rem; }
+.user-menu__dropdown { width: min(330px, calc(100vw - 24px)); position: absolute; top: calc(100% + 10px); right: 0; z-index: 100; display: grid; padding: 8px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-elevated); box-shadow: var(--shadow-lg); animation: menu-in .18s ease both; }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-5px) scale(.985); } }
+.user-menu__summary { display: flex; align-items: center; gap: 12px; margin-bottom: 5px; padding: 10px; border-bottom: 1px solid var(--color-border); }
+.user-menu__summary > div { min-width: 0; display: grid; }
+.user-menu__summary span, .user-menu__summary small { color: var(--color-text-tertiary); font-size: .7rem; }
+.user-menu__summary small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-menu__dropdown > a, .user-menu__dropdown > button { min-height: 42px; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; color: var(--color-text-secondary); background: transparent; cursor: pointer; text-decoration: none; font-size: .77rem; font-weight: 700; }
+.user-menu__dropdown > a:hover, .user-menu__dropdown > button:hover { color: var(--color-primary); background: var(--color-primary-soft); }
+.user-menu__dropdown svg { width: 17px; }
+.user-menu__dropdown a svg:last-child { width: 12px; margin-left: auto; }
+.user-menu__theme { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 10px; color: var(--color-text-tertiary); font-size: .72rem; }
+.user-avatar { --avatar-a: var(--color-primary); --avatar-b: var(--color-primary-accent); width: 38px; height: 38px; position: relative; display: grid; place-items: center; flex: 0 0 auto; overflow: hidden; border: 2px solid color-mix(in srgb, var(--avatar-b) 45%, var(--color-surface)); border-radius: 12px; color: #fff; background: linear-gradient(145deg, var(--avatar-a), var(--avatar-b)); font-size: .75rem; font-weight: 900; }
+.user-avatar i { width: 18px; height: 18px; position: absolute; right: -6px; bottom: -6px; border: 3px solid rgba(255,255,255,.45); border-radius: 50%; }
+.user-avatar--sm { width: 30px; height: 30px; }.user-avatar--lg { width: 76px; height: 76px; border-radius: 22px; font-size: 1.25rem; }
+.user-avatar--amber-sun, .user-avatar--golden-node { --avatar-a: #92400e; --avatar-b: #f59e0b; }.user-avatar--indigo-wave, .user-avatar--navy-pulse { --avatar-a: #312e81; --avatar-b: #6366f1; }.user-avatar--coral-arc, .user-avatar--rose-kite { --avatar-a: #9f1239; --avatar-b: #fb7185; }.user-avatar--teal-grid, .user-avatar--cyan-path { --avatar-a: #115e59; --avatar-b: #22d3ee; }.user-avatar--violet-bloom, .user-avatar--plum-spark { --avatar-a: #581c87; --avatar-b: #c084fc; }.user-avatar--forest-ring { --avatar-a: #14532d; --avatar-b: #4ade80; }
 .theme-control { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 6px 0 10px; border: 1px solid var(--color-border); border-radius: 9px; color: var(--color-text-secondary); background: var(--color-surface); }
 .theme-control select { max-width: 78px; height: 34px; padding: 0 4px; border: 0; outline: 0; color: var(--color-text-secondary); background: transparent; cursor: pointer; font-size: .75rem; font-weight: 700; }
 .theme-control:focus-within { border-color: var(--color-primary); box-shadow: var(--focus); }
@@ -131,11 +152,9 @@
   .app-shell > .sidebar { display: none; }
   .topbar { height: 68px; gap: 8px; padding: 0 16px; }
   .topbar__menu { display: grid; }
-  .topbar__crumbs span, .topbar__crumbs svg, .topbar__identity > span:last-child, .topbar__user .badge, .topbar__user .button span { display: none; }
+  .topbar__crumbs span, .topbar__crumbs svg, .user-menu__trigger > span:last-child { display: none; }
   .topbar__user { gap: 3px; }
-  .theme-control { padding-left: 8px; }
-  .theme-control select { width: 70px; }
-  .topbar__user .button { width: 38px; padding: 0; }
+  .user-menu__dropdown { position: fixed; top: 62px; right: 8px; }
   .app-content { padding: 25px 17px 40px; }
   .mobile-drawer { position: fixed; inset: 0; z-index: 50; display: block; }
   .mobile-drawer__backdrop { position: absolute; inset: 0; width: 100%; background: var(--color-mobile-overlay); }

@@ -35,8 +35,12 @@ export type CurrentUser = {
   institutionId: string | null
   institutionName?: string | null
   institutionCode?: string | null
+  avatarKey?: string | null
   roles: Role[]
 }
+
+export type UpdateProfileRequest = { firstName: string; lastName: string; avatarKey: string | null }
+export type ChangePasswordRequest = { currentPassword: string; newPassword: string; confirmPassword: string }
 
 export const isRole = (value: string): value is Role =>
   domainRoles.some((role) => role === value)

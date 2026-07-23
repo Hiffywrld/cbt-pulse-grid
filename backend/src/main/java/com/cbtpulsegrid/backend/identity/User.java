@@ -58,6 +58,9 @@ public class User {
 	@Column(name = "registration_number", length = 100)
 	private String registrationNumber;
 
+	@Column(name = "avatar_key", length = 32)
+	private String avatarKey;
+
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false, length = 20)
 	private UserStatus status;
@@ -147,6 +150,14 @@ public class User {
 
 	public String getRegistrationNumber() {
 		return registrationNumber;
+	}
+
+	public String getAvatarKey() {
+		return avatarKey;
+	}
+
+	public void setAvatarKey(String avatarKey) {
+		this.avatarKey = avatarKey;
 	}
 
 	public void setRegistrationNumber(String registrationNumber) {

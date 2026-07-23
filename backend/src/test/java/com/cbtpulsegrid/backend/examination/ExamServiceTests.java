@@ -196,6 +196,23 @@ class ExamServiceTests {
 	}
 
 	@Test
+	void examinerCannotReadOrManageAnotherExaminersExam() {
+		UUID examId = UUID.randomUUID();
+		Exam exam = exam(examId, INSTITUTION_ID, ExamStatus.DRAFT, 2);
+		ReflectionTestUtils.setField(exam, "createdBy", UUID.randomUUID());
+		when(examRepository.findWithPoolRulesById(examId)).thenReturn(Optional.of(exam));
+
+		assertThrows(
+				AccessDeniedException.class,
+				() -> examService.get(manager(INSTITUTION_ID), examId)
+		);
+		assertThrows(
+				AccessDeniedException.class,
+				() -> examService.update(manager(INSTITUTION_ID), examId, updateRequest())
+		);
+	}
+
+	@Test
 	void limitsInvigilatorReadsToPublishedExams() {
 		UUID draftId = UUID.randomUUID();
 		when(examRepository.findWithPoolRulesById(draftId))
