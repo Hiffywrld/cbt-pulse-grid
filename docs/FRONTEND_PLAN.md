@@ -87,3 +87,14 @@ The dashboard will:
 - Never show device identifiers/hashes, answer keys, access PIN data, credentials, or tokens.
 
 WebSocket messages are an immediacy channel, not the system of record. PostgreSQL-backed REST state remains authoritative.
+## Phase 4 implementation lock
+
+Phase 4 delivers the candidate runner through the existing student attempt APIs. PIN validation starts or resumes an attempt, and the raw PIN is held only in component memory for the duration of the request. A locally generated device identifier is retained only to satisfy the backend device lock; the backend stores its SHA-256 hash.
+
+The runner uses `serverTime` and `expiresAt` to calculate clock drift. Its one-second countdown is display-only: refreshes never reset the authoritative backend expiry, and an expired attempt is submitted or retrieved through the backend’s idempotent submission/result APIs.
+
+Offline answer state is stored in IndexedDB under `cbt-pulse-grid-attempts`. Records contain only attempt IDs, exam IDs, attempt-question IDs, selected attempt-option IDs, increasing client sequences, idempotent sync IDs and timestamps needed for synchronization. Each pending batch retains one immutable sync ID and answer snapshot until acknowledged, while newer sequences remain queued for the next batch. Tokens, access PINs, correct-answer flags, monitoring evidence and question-bank source identifiers are excluded. Higher answer sequences replace lower ones; acknowledged records are removed, and all local attempt data is deleted after safe finalization.
+
+While an attempt is in progress, the client sends 15-second heartbeats and records only backend-supported browser events: tab hidden, window blur, fullscreen exit, copy, paste and network transitions. Events are UUID-addressed, held in memory for reconnect synchronization, and sent in idempotent batches; monitoring evidence is not persisted in IndexedDB. No webcam, face recognition or speculative developer-tools detection is claimed. Listeners and timers are removed when the runner unmounts or finalizes.
+
+Institution staff results use the tenant-secured summary, candidate page, attempt review and UTF-8 CSV endpoints. Students receive their own result immediately after submission through `/api/v1/student/attempts/{attemptId}/result`. The backend currently has no student-scoped completed-results collection endpoint, so a persistent “My results” history is intentionally not exposed until that safe contract exists.

@@ -11,6 +11,11 @@ import { ExamDetailPage } from '../features/exams/exam-detail-page'
 import { ExamsPage } from '../features/exams/exams-page'
 import { InstitutionsPage } from '../features/institutions/institutions-page'
 import { QuestionsPage } from '../features/questions/questions-page'
+import { AttemptReviewPage } from '../features/results/attempt-review-page'
+import { ExamResultsPage } from '../features/results/exam-results-page'
+import { ResultsPage } from '../features/results/results-page'
+import { StudentAttemptPage } from '../features/student/student-attempt-page'
+import { StudentAttemptResultPage } from '../features/student/student-attempt-result-page'
 import { StudentExamDetailPage } from '../features/student/student-exam-detail-page'
 import { StudentExamStartPage } from '../features/student/student-exam-start-page'
 import { StudentExamsPage } from '../features/student/student-exams-page'
@@ -56,11 +61,17 @@ export const AppRoutes = () => (
           <Route path="/institution/exams" element={<ExamsPage />} />
           <Route path="/institution/exams/:examId" element={<ExamDetailPage />} />
           <Route path="/institution/monitoring" element={<Placeholder page="monitoring" />} />
-          <Route path="/institution/results" element={<Placeholder page="results" />} />
+          <Route path="/institution/results" element={<ResultsPage />} />
+          <Route path="/institution/results/exams/:examId" element={<ExamResultsPage />} />
+          <Route path="/institution/results/attempts/:attemptId" element={<AttemptReviewPage />} />
           <Route path="/institution/audit" element={<RoleOnly roles={['INSTITUTION_ADMIN']} page="audit" />} />
         </Route>
       </Route>
-      <Route element={<RoleRoute roles={['STUDENT']} />}><Route element={<AppShell />}><Route path="/student" element={<DashboardPage area="student" />} /><Route path="/student/exams" element={<StudentExamsPage />} /><Route path="/student/exams/:examId" element={<StudentExamDetailPage />} /><Route path="/student/exams/:examId/start" element={<StudentExamStartPage />} /><Route path="/student/results" element={<Placeholder page="studentResults" />} /></Route></Route>
+      <Route element={<RoleRoute roles={['STUDENT']} />}>
+        <Route element={<AppShell />}><Route path="/student" element={<DashboardPage area="student" />} /><Route path="/student/exams" element={<StudentExamsPage />} /><Route path="/student/exams/:examId" element={<StudentExamDetailPage />} /><Route path="/student/exams/:examId/start" element={<StudentExamStartPage />} /></Route>
+        <Route path="/student/attempts/:attemptId" element={<StudentAttemptPage />} />
+        <Route element={<AppShell />}><Route path="/student/attempts/:attemptId/result" element={<StudentAttemptResultPage />} /></Route>
+      </Route>
     </Route>
     <Route path="*" element={<NotFoundPage />} />
   </Routes>

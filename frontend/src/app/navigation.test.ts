@@ -10,8 +10,9 @@ describe('role-aware navigation', () => {
 
   it('shows student navigation without staff administration links', () => {
     const labels = navigationFor({ id: '1', email: 'student@example.edu', institutionId: 'i1', roles: ['STUDENT'] }).map((item) => item.label)
-    expect(labels).toEqual(['Student overview', 'My examinations', 'My results'])
+    expect(labels).toEqual(['Student overview', 'My examinations'])
     expect(labels).not.toContain('Question bank')
+    expect(labels).not.toContain('Results')
   })
 
   it('shows institution-admin-only links only to institution administrators', () => {

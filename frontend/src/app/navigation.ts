@@ -1,4 +1,4 @@
-import { Activity, BookOpenCheck, Building2, ClipboardCheck, FileQuestion, Gauge, History, LayoutDashboard, MonitorCheck, ScrollText, Users, type LucideIcon } from 'lucide-react'
+import { BookOpenCheck, Building2, ClipboardCheck, FileQuestion, Gauge, History, LayoutDashboard, MonitorCheck, ScrollText, Users, type LucideIcon } from 'lucide-react'
 import type { CurrentUser, Role } from '../types/auth'
 
 export type NavigationItem = { label: string; to: string; icon: LucideIcon; roles: readonly Role[] }
@@ -19,7 +19,6 @@ export const navigationItems: NavigationItem[] = [
   { label: 'Audit trail', to: '/institution/audit', icon: History, roles: ['INSTITUTION_ADMIN'] },
   { label: 'Student overview', to: '/student', icon: LayoutDashboard, roles: ['STUDENT'] },
   { label: 'My examinations', to: '/student/exams', icon: ClipboardCheck, roles: ['STUDENT'] },
-  { label: 'My results', to: '/student/results', icon: Activity, roles: ['STUDENT'] },
 ]
 
 export const navigationFor = (user: CurrentUser) => navigationItems.filter((item) => item.roles.some((role) => user.roles.includes(role)))
