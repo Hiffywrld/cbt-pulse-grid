@@ -4,7 +4,7 @@
 
 This document locks the frontend product boundaries for CBT-Pulse Grid. New screens must follow the backend's role and tenant rules, use candidate-safe contracts, and preserve offline-first examination delivery. Frontend visibility improves usability but never replaces backend authorization.
 
-Phase 1 provides authentication, session restoration, route protection, navigation, responsive layout, connectivity awareness, and reusable UI foundations. It does not simulate business data or implement later workflows prematurely.
+Phase 1 provides authentication, session restoration, route protection, navigation, responsive layout, connectivity awareness, and reusable UI foundations. Phase 2 connects platform administration, tenant user management, role dashboards, and candidate-safe assigned-exam discovery to the real backend contracts.
 
 ## Locked role and page matrix
 
@@ -13,7 +13,7 @@ Phase 1 provides authentication, session restoration, route protection, navigati
 | Platform dashboard | Full | No | No | No | No |
 | Institution management | Manage | No | No | No | No |
 | Institution dashboard | No | Full | Full | Full | No |
-| Institutional user accounts | No | Manage within institution | No | No | No |
+| Institutional user accounts | Manage institution administrators across tenants | Manage staff and students within institution | No | No | No |
 | Subjects | No | Manage | Read | No | No |
 | Question bank | No | Manage | Manage | No | No |
 | Staff exam management | No | Manage | Manage | Read published details/candidates | No |
@@ -38,10 +38,10 @@ Phase 1 provides authentication, session restoration, route protection, navigati
 ## Frontend delivery phases
 
 1. **Foundation and authentication** — environment validation, typed native-fetch client, refresh rotation, protected/role routes, application shell, connectivity state, design system, and test infrastructure.
-2. **Platform and identity administration** — institution CRUD for `SUPER_ADMIN`, then institutional user-account management for `INSTITUTION_ADMIN`.
+2. **Platform, identity, and assigned-exam portals (completed)** — institution lifecycle management and institution-administrator provisioning for `SUPER_ADMIN`; tenant-safe staff/student account management for `INSTITUTION_ADMIN`; real role dashboards; student identity, assigned-exam availability, details, instructions, and a secure PIN-step hand-off. The PIN is not submitted until the full runner exists because successful backend validation starts the authoritative attempt timer.
 3. **Academic content** — subjects and staff-only question-bank authoring, validation, publishing, and filtering.
 4. **Exam preparation** — exam lifecycle, pool rules, PIN rotation, candidate assignment, and staff result configuration.
-5. **Candidate delivery** — assigned-exam discovery, PIN/device start, secure attempt package, autosave, resume, timer, and submission.
+5. **Candidate delivery** — PIN/device start, secure attempt package, autosave, resume, timer, and submission. Assigned-exam discovery and instructions were completed in Phase 2.
 6. **Invigilation and reporting** — heartbeat and browser-event capture, authenticated STOMP dashboard, monitoring history, result reporting, CSV export, and audit history.
 7. **Operational refinement** — accessibility audit, performance profiling, deployment-aware configuration, offline recovery drills, and end-to-end institutional acceptance tests.
 

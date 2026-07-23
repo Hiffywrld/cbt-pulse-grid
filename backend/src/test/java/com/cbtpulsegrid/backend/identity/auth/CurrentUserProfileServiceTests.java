@@ -29,6 +29,7 @@ class CurrentUserProfileServiceTests {
 		UUID userId = UUID.randomUUID();
 		UUID institutionId = UUID.randomUUID();
 		User user = new User("Amina", "Okafor", "amina@niitlagos.local", "unused-hash", UserStatus.ACTIVE);
+		user.setRegistrationNumber("NIIT-2026-001");
 		InstitutionProfile institution = new InstitutionProfile(
 				institutionId,
 				"NIIT Lagos Campus",
@@ -45,6 +46,7 @@ class CurrentUserProfileServiceTests {
 
 		assertEquals("Amina", response.firstName());
 		assertEquals("Okafor", response.lastName());
+		assertEquals("NIIT-2026-001", response.registrationNumber());
 		assertEquals("NIIT Lagos Campus", response.institutionName());
 		assertEquals("NIIT-LAGOS", response.institutionCode());
 		assertEquals(List.of("INSTITUTION_ADMIN"), response.roles());
@@ -60,6 +62,7 @@ class CurrentUserProfileServiceTests {
 
 		assertEquals("System", response.firstName());
 		assertEquals("Administrator", response.lastName());
+		assertNull(response.registrationNumber());
 		assertNull(response.institutionId());
 		assertNull(response.institutionName());
 		assertNull(response.institutionCode());

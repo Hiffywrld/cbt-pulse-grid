@@ -33,6 +33,7 @@ public class CurrentUserProfileService {
 				user.getEmail(),
 				user.getFirstName(),
 				user.getLastName(),
+				user.getRegistrationNumber(),
 				institutionId,
 				institution == null ? null : institution.name(),
 				institution == null ? null : institution.code(),

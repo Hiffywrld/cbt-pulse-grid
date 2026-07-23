@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import type { ReactNode } from 'react'
 import { AppShell } from '../components/layout/app-shell'
 import { LoginPage } from '../features/auth/login-page'
 import { ProtectedRoute } from '../features/auth/protected-route'
@@ -6,6 +7,11 @@ import { RoleRoute } from '../features/auth/role-route'
 import { homeForUser } from '../features/auth/role-routing'
 import { useAuth } from '../features/auth/use-auth'
 import { DashboardPage } from '../features/dashboard/dashboard-page'
+import { InstitutionsPage } from '../features/institutions/institutions-page'
+import { StudentExamDetailPage } from '../features/student/student-exam-detail-page'
+import { StudentExamStartPage } from '../features/student/student-exam-start-page'
+import { StudentExamsPage } from '../features/student/student-exams-page'
+import { UsersPage } from '../features/users/users-page'
 import type { Role } from '../types/auth'
 import { NotFoundPage, UnauthorizedPage } from './error-pages'
 import { PlaceholderPage } from './placeholder-page'
@@ -25,9 +31,9 @@ const Placeholder = ({ page }: { page: keyof typeof placeholders }) => {
   return <PlaceholderPage title={title} description={description} />
 }
 
-const RoleOnly = ({ roles, page }: { roles: readonly Role[]; page: keyof typeof placeholders }) => {
+const RoleOnly = ({ roles, page, element }: { roles: readonly Role[]; page?: keyof typeof placeholders; element?: ReactNode }) => {
   const { user } = useAuth()
-  return user && roles.some((role) => user.roles.includes(role)) ? <Placeholder page={page} /> : <Navigate to="/unauthorized" replace />
+  return user && roles.some((role) => user.roles.includes(role)) ? (element ?? (page ? <Placeholder page={page} /> : null)) : <Navigate to="/unauthorized" replace />
 }
 
 export const AppRoutes = () => (
@@ -36,11 +42,11 @@ export const AppRoutes = () => (
     <Route path="/login" element={<LoginPage />} />
     <Route element={<ProtectedRoute />}>
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
-      <Route element={<RoleRoute roles={['SUPER_ADMIN']} />}><Route element={<AppShell />}><Route path="/platform" element={<DashboardPage area="platform" />} /><Route path="/platform/institutions" element={<Placeholder page="institutions" />} /></Route></Route>
+      <Route element={<RoleRoute roles={['SUPER_ADMIN']} />}><Route element={<AppShell />}><Route path="/platform" element={<DashboardPage area="platform" />} /><Route path="/platform/institutions" element={<InstitutionsPage />} /><Route path="/platform/administrators" element={<UsersPage mode="platform-admins" />} /></Route></Route>
       <Route element={<RoleRoute roles={['INSTITUTION_ADMIN', 'EXAMINER', 'INVIGILATOR']} />}>
         <Route element={<AppShell />}>
           <Route path="/institution" element={<DashboardPage area="institution" />} />
-          <Route path="/institution/users" element={<RoleOnly roles={['INSTITUTION_ADMIN']} page="users" />} />
+          <Route path="/institution/users" element={<RoleOnly roles={['INSTITUTION_ADMIN']} element={<UsersPage mode="institution" />} />} />
           <Route path="/institution/subjects" element={<RoleOnly roles={['INSTITUTION_ADMIN', 'EXAMINER']} page="subjects" />} />
           <Route path="/institution/questions" element={<RoleOnly roles={['INSTITUTION_ADMIN', 'EXAMINER']} page="questions" />} />
           <Route path="/institution/exams" element={<Placeholder page="exams" />} />
@@ -49,7 +55,7 @@ export const AppRoutes = () => (
           <Route path="/institution/audit" element={<RoleOnly roles={['INSTITUTION_ADMIN']} page="audit" />} />
         </Route>
       </Route>
-      <Route element={<RoleRoute roles={['STUDENT']} />}><Route element={<AppShell />}><Route path="/student" element={<DashboardPage area="student" />} /><Route path="/student/exams" element={<Placeholder page="studentExams" />} /><Route path="/student/results" element={<Placeholder page="studentResults" />} /></Route></Route>
+      <Route element={<RoleRoute roles={['STUDENT']} />}><Route element={<AppShell />}><Route path="/student" element={<DashboardPage area="student" />} /><Route path="/student/exams" element={<StudentExamsPage />} /><Route path="/student/exams/:examId" element={<StudentExamDetailPage />} /><Route path="/student/exams/:examId/start" element={<StudentExamStartPage />} /><Route path="/student/results" element={<Placeholder page="studentResults" />} /></Route></Route>
     </Route>
     <Route path="*" element={<NotFoundPage />} />
   </Routes>

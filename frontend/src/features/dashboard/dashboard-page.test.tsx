@@ -5,6 +5,10 @@ import type { CurrentUser } from '../../types/auth'
 import { AuthContext } from '../auth/auth-context'
 import { DashboardPage } from './dashboard-page'
 
+vi.mock('../institutions/institution-hooks', () => ({ useInstitutions: () => ({ data: { totalElements: 2 } }) }))
+vi.mock('../users/user-hooks', () => ({ useUsers: (params: { role?: string }) => ({ data: { totalElements: params.role === 'STUDENT' ? 18 : 24 } }) }))
+vi.mock('../student/student-exam-hooks', () => ({ useStudentExams: () => ({ data: [] }) }))
+
 const renderDashboard = (user: CurrentUser, area: 'platform' | 'institution' = 'institution') => render(
   <AuthContext.Provider value={{ status: 'authenticated', user, login: vi.fn(), logout: vi.fn() }}>
     <MemoryRouter><DashboardPage area={area} /></MemoryRouter>
@@ -22,6 +26,7 @@ describe('Dashboard authenticated identity display', () => {
       institutionId,
       institutionName: 'NIIT Lagos Campus',
       institutionCode: 'NIIT-LAGOS',
+      registrationNumber: 'NIIT-2026-001',
       roles: ['INSTITUTION_ADMIN'],
     })
 
@@ -29,6 +34,7 @@ describe('Dashboard authenticated identity display', () => {
     expect(screen.getByText('Amina Okafor')).toBeInTheDocument()
     expect(screen.getAllByText('Institution Administrator').length).toBeGreaterThan(0)
     expect(screen.getAllByText(/NIIT Lagos Campus/).length).toBeGreaterThan(0)
+    expect(screen.getByText('NIIT-2026-001')).toBeInTheDocument()
     expect(screen.queryByText(institutionId)).not.toBeInTheDocument()
   })
 

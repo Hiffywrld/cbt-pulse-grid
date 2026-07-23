@@ -31,6 +31,7 @@ export type CurrentUser = {
   email: string
   firstName?: string | null
   lastName?: string | null
+  registrationNumber?: string | null
   institutionId: string | null
   institutionName?: string | null
   institutionCode?: string | null

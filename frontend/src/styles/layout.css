@@ -107,6 +107,8 @@
   .sidebar__nav a, .sidebar__security, .sidebar__collapse, .sidebar__context { justify-content: center; }
   .shortcut-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .institution-context { grid-template-columns: 1fr; gap: 24px; }
+  .filter-bar { grid-template-columns: 1fr 1fr; }
+  .filter-bar form { grid-column: 1 / -1; }
 }
 
 @media (max-width: 760px) {
@@ -139,4 +141,18 @@
   .section-heading > p { text-align: left; }
   .institution-context dl { grid-template-columns: 1fr; }
   .connectivity-banner { bottom: 10px; font-size: .74rem; }
+  .filter-bar, .filter-bar form, .form-grid, .exam-grid, .detail-grid { grid-template-columns: 1fr; }
+  .filter-bar form { grid-column: auto; }
+  .filter-bar form .button { width: 100%; }
+  .responsive-data { overflow: visible; border: 0; background: transparent; box-shadow: none; }
+  .responsive-data table, .responsive-data tbody { display: grid; gap: 12px; }
+  .responsive-data thead { display: none; }
+  .responsive-data tr { display: grid; gap: 9px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-sm); }
+  .responsive-data td { display: grid; grid-template-columns: minmax(95px, .65fr) 1.35fr; gap: 12px; padding: 0; border: 0; }
+  .responsive-data td::before { content: attr(data-label); color: var(--ink-500); font-size: .68rem; font-weight: 800; text-transform: uppercase; }
+  .responsive-data .row-actions { display: flex; justify-content: flex-start; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--border); }
+  .responsive-data .row-actions::before { display: none; }
+  .pagination { align-items: flex-start; flex-direction: column; }
+  .start-callout { align-items: flex-start; flex-direction: column; }
+  .start-callout .button { width: 100%; }
 }

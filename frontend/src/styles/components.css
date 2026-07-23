@@ -66,6 +66,54 @@
 .stat-card strong { display: block; margin: 3px 0 1px; color: var(--ink-950); font-size: 1.05rem; }
 .stat-card small { display: block; max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .7rem; }
 
+.filter-bar { display: grid; grid-template-columns: minmax(320px, 1.7fr) repeat(2, minmax(170px, .65fr)); align-items: end; gap: 14px; margin-bottom: 18px; padding: 16px; }
+.filter-bar form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
+.responsive-data { overflow: hidden; }
+.responsive-data table { width: 100%; border-collapse: collapse; }
+.responsive-data th, .responsive-data td { padding: 15px 17px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; font-size: .8rem; }
+.responsive-data th { color: var(--ink-500); background: var(--surface-muted); font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; }
+.responsive-data tbody tr:last-child td { border-bottom: 0; }
+.responsive-data td strong, .responsive-data td small { display: block; }
+.responsive-data td small { margin-top: 3px; color: var(--ink-500); }
+.row-actions { display: flex; justify-content: flex-end; gap: 4px; white-space: nowrap; }
+.pagination { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 2px; }
+.pagination p { margin: 0; font-size: .78rem; }
+.pagination > div { display: flex; gap: 8px; }
+.management-form { display: grid; gap: 17px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 18px; }
+.detail-list { display: grid; gap: 0; margin: 0; }
+.detail-list > div { display: grid; grid-template-columns: minmax(120px, .7fr) 1.3fr; gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.detail-list > div:last-child { border-bottom: 0; }
+.detail-list dt { color: var(--ink-500); font-size: .74rem; font-weight: 750; }
+.detail-list dd { margin: 0; color: var(--ink-800); font-size: .82rem; font-weight: 700; }
+.page-notice { margin: -10px 0 20px; }
+.skeleton-list { display: grid; gap: 8px; }
+.skeleton-row { min-height: 66px; display: grid; grid-template-columns: 1.4fr 1fr .7fr; align-items: center; gap: 25px; padding: 15px 18px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); }
+.skeleton-row span { height: 12px; border-radius: 8px; background: linear-gradient(90deg, #edf2f7 25%, #f8fafc 50%, #edf2f7 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.exam-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.exam-card { display: flex; flex-direction: column; min-height: 250px; padding: 22px; }
+.exam-card__top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.exam-code { color: var(--blue-700); font-size: .72rem; font-weight: 850; letter-spacing: .08em; }
+.exam-card h2 { margin: 25px 0 14px; font-size: 1.15rem; }
+.exam-card__facts { display: grid; gap: 8px; color: var(--ink-500); font-size: .76rem; }
+.exam-card__facts span { display: flex; align-items: flex-start; gap: 7px; }
+.text-link, .back-link { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; text-decoration: none; }
+.exam-card .text-link { margin-top: auto; padding-top: 24px; font-size: .78rem; }
+.back-link { margin-bottom: 19px; font-size: .76rem; }
+.detail-grid { display: grid; grid-template-columns: .8fr 1.2fr; gap: 16px; }
+.detail-panel { padding: 23px; }
+.detail-panel h2, .start-callout h2, .pin-panel h2 { margin-top: 0; font-size: 1.08rem; }
+.instructions-text { white-space: pre-wrap; }
+.start-callout { display: flex; align-items: center; justify-content: space-between; gap: 25px; margin-top: 18px; padding: 22px; }
+.start-callout > div { display: flex; align-items: flex-start; gap: 14px; }
+.start-callout svg { flex: 0 0 auto; color: var(--blue-700); }
+.start-callout p { margin: 0; font-size: .8rem; }
+.pin-panel { max-width: 620px; display: grid; gap: 16px; padding: 28px; }
+.pin-panel > svg { color: var(--blue-700); }
+.pin-panel .button { justify-self: start; }
+
 .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 25px; margin-bottom: 28px; }
 .page-header h1 { margin: 0 0 7px; font-size: clamp(1.7rem, 3vw, 2.25rem); letter-spacing: -.035em; }
 .page-header p:not(.eyebrow) { max-width: 720px; margin-bottom: 0; }

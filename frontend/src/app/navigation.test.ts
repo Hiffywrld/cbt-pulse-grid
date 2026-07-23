@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { navigationFor } from './navigation'
 
 describe('role-aware navigation', () => {
+  it('keeps platform management exclusive to super administrators', () => {
+    const labels = navigationFor({ id: '0', email: 'platform@example.edu', institutionId: null, roles: ['SUPER_ADMIN'] }).map((item) => item.label)
+    expect(labels).toEqual(['Platform overview', 'Institutions', 'Institution admins'])
+    expect(labels).not.toContain('User accounts')
+  })
+
   it('shows student navigation without staff administration links', () => {
     const labels = navigationFor({ id: '1', email: 'student@example.edu', institutionId: 'i1', roles: ['STUDENT'] }).map((item) => item.label)
     expect(labels).toEqual(['Student overview', 'My examinations', 'My results'])

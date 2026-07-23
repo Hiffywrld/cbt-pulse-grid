@@ -112,7 +112,10 @@ public class UserAccountService {
 				Sort.by(Sort.Order.asc("lastName"), Sort.Order.asc("firstName"))
 		);
 		Page<UserResponse> result = userRepository
-				.search(normalizedSearch, institutionScope, role, status, pageRequest)
+				.findAll(
+						UserSpecifications.filteredBy(normalizedSearch, institutionScope, role, status),
+						pageRequest
+				)
 				.map(UserAccountService::toResponse);
 		return UserPageResponse.from(result);
 	}

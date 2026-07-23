@@ -8,6 +8,7 @@ const academicManagers: Role[] = ['INSTITUTION_ADMIN', 'EXAMINER']
 export const navigationItems: NavigationItem[] = [
   { label: 'Platform overview', to: '/platform', icon: Gauge, roles: ['SUPER_ADMIN'] },
   { label: 'Institutions', to: '/platform/institutions', icon: Building2, roles: ['SUPER_ADMIN'] },
+  { label: 'Institution admins', to: '/platform/administrators', icon: Users, roles: ['SUPER_ADMIN'] },
   { label: 'Institution overview', to: '/institution', icon: LayoutDashboard, roles: allStaff },
   { label: 'User accounts', to: '/institution/users', icon: Users, roles: ['INSTITUTION_ADMIN'] },
   { label: 'Subjects', to: '/institution/subjects', icon: BookOpenCheck, roles: academicManagers },

@@ -70,7 +70,7 @@ public class InstitutionService {
 		String normalizedSearch = normalizeSearch(search);
 		PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "name"));
 		Page<InstitutionResponse> result = institutionRepository
-				.search(normalizedSearch, status, pageRequest)
+				.findAll(InstitutionSpecifications.filteredBy(normalizedSearch, status), pageRequest)
 				.map(InstitutionService::toResponse);
 		return PageResponse.from(result);
 	}

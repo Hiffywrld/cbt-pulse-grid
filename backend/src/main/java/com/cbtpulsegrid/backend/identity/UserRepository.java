@@ -5,13 +5,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface UserRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificationExecutor<User> {
 
 	Optional<User> findByEmailIgnoreCase(String email);
 
@@ -46,26 +45,4 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 			""")
 	List<User> findAllWithRolesByIdIn(@Param("ids") Collection<UUID> ids);
 
-	@Query("""
-			select user
-			from User user
-			where (
-				:search is null
-				or lower(user.firstName) like lower(concat('%', :search, '%'))
-				or lower(user.lastName) like lower(concat('%', :search, '%'))
-				or lower(concat(user.firstName, ' ', user.lastName)) like lower(concat('%', :search, '%'))
-				or lower(user.email) like lower(concat('%', :search, '%'))
-				or lower(user.registrationNumber) like lower(concat('%', :search, '%'))
-			)
-			and (:institutionId is null or user.institutionId = :institutionId)
-			and (:role is null or :role member of user.roles)
-			and (:status is null or user.status = :status)
-			""")
-	Page<User> search(
-			@Param("search") String search,
-			@Param("institutionId") UUID institutionId,
-			@Param("role") Role role,
-			@Param("status") UserStatus status,
-			Pageable pageable
-	);
 }
