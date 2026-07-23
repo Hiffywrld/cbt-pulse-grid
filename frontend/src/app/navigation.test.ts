@@ -8,6 +8,16 @@ describe('role-aware navigation', () => {
     expect(labels).not.toContain('User accounts')
   })
 
+  it('limits governance operations to institution administrators', () => {
+    const admin = navigationFor({ id: '3', email: 'admin@example.edu', institutionId: 'i1', roles: ['INSTITUTION_ADMIN'] }).map((item) => item.to)
+    const examiner = navigationFor({ id: '2', email: 'examiner@example.edu', institutionId: 'i1', roles: ['EXAMINER'] }).map((item) => item.to)
+    expect(admin).toContain('/institution/audit')
+    expect(admin).toContain('/institution/webhooks')
+    expect(examiner).not.toContain('/institution/audit')
+    expect(examiner).not.toContain('/institution/webhooks')
+    expect(examiner).toContain('/institution/monitoring')
+  })
+
   it('shows student navigation without staff administration links', () => {
     const labels = navigationFor({ id: '1', email: 'student@example.edu', institutionId: 'i1', roles: ['STUDENT'] }).map((item) => item.label)
     expect(labels).toEqual(['Student overview', 'My examinations'])

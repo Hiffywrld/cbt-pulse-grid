@@ -1,4 +1,4 @@
-import { BookOpenCheck, Building2, ClipboardCheck, FileQuestion, Gauge, History, LayoutDashboard, MonitorCheck, ScrollText, Users, type LucideIcon } from 'lucide-react'
+import { BookOpenCheck, Building2, ClipboardCheck, FileQuestion, Gauge, History, LayoutDashboard, MonitorCheck, RadioTower, ScrollText, Users, type LucideIcon } from 'lucide-react'
 import type { CurrentUser, Role } from '../types/auth'
 
 export type NavigationItem = { label: string; to: string; icon: LucideIcon; roles: readonly Role[] }
@@ -17,6 +17,7 @@ export const navigationItems: NavigationItem[] = [
   { label: 'Live monitoring', to: '/institution/monitoring', icon: MonitorCheck, roles: allStaff },
   { label: 'Results', to: '/institution/results', icon: ScrollText, roles: allStaff },
   { label: 'Audit trail', to: '/institution/audit', icon: History, roles: ['INSTITUTION_ADMIN'] },
+  { label: 'Webhooks', to: '/institution/webhooks', icon: RadioTower, roles: ['INSTITUTION_ADMIN'] },
   { label: 'Student overview', to: '/student', icon: LayoutDashboard, roles: ['STUDENT'] },
   { label: 'My examinations', to: '/student/exams', icon: ClipboardCheck, roles: ['STUDENT'] },
 ]

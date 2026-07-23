@@ -10,6 +10,9 @@ import { DashboardPage } from '../features/dashboard/dashboard-page'
 import { ExamDetailPage } from '../features/exams/exam-detail-page'
 import { ExamsPage } from '../features/exams/exams-page'
 import { InstitutionsPage } from '../features/institutions/institutions-page'
+import { AuditPage } from '../features/audit/audit-page'
+import { MonitoringEventsPage } from '../features/monitoring/monitoring-events-page'
+import { MonitoringPage } from '../features/monitoring/monitoring-page'
 import { QuestionsPage } from '../features/questions/questions-page'
 import { AttemptReviewPage } from '../features/results/attempt-review-page'
 import { ExamResultsPage } from '../features/results/exam-results-page'
@@ -21,6 +24,7 @@ import { StudentExamStartPage } from '../features/student/student-exam-start-pag
 import { StudentExamsPage } from '../features/student/student-exams-page'
 import { SubjectsPage } from '../features/subjects/subjects-page'
 import { UsersPage } from '../features/users/users-page'
+import { WebhooksPage } from '../features/webhooks/webhooks-page'
 import type { Role } from '../types/auth'
 import { NotFoundPage, UnauthorizedPage } from './error-pages'
 import { PlaceholderPage } from './placeholder-page'
@@ -60,11 +64,13 @@ export const AppRoutes = () => (
           <Route path="/institution/questions" element={<RoleOnly roles={['INSTITUTION_ADMIN', 'EXAMINER']} element={<QuestionsPage />} />} />
           <Route path="/institution/exams" element={<ExamsPage />} />
           <Route path="/institution/exams/:examId" element={<ExamDetailPage />} />
-          <Route path="/institution/monitoring" element={<Placeholder page="monitoring" />} />
+          <Route path="/institution/monitoring" element={<MonitoringPage />} />
+          <Route path="/institution/monitoring/attempts/:attemptId" element={<MonitoringEventsPage />} />
           <Route path="/institution/results" element={<ResultsPage />} />
           <Route path="/institution/results/exams/:examId" element={<ExamResultsPage />} />
           <Route path="/institution/results/attempts/:attemptId" element={<AttemptReviewPage />} />
-          <Route path="/institution/audit" element={<RoleOnly roles={['INSTITUTION_ADMIN']} page="audit" />} />
+          <Route path="/institution/audit" element={<RoleOnly roles={['INSTITUTION_ADMIN']} element={<AuditPage />} />} />
+          <Route path="/institution/webhooks" element={<RoleOnly roles={['INSTITUTION_ADMIN']} element={<WebhooksPage />} />} />
         </Route>
       </Route>
       <Route element={<RoleRoute roles={['STUDENT']} />}>
