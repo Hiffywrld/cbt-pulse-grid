@@ -13,6 +13,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.ApiValidationException;
 import com.cbtpulsegrid.backend.audit.AuditAction;
 import com.cbtpulsegrid.backend.audit.AuditResourceType;
 import com.cbtpulsegrid.backend.audit.AuditTrail;
@@ -33,6 +34,7 @@ import com.cbtpulsegrid.backend.questionbank.ExaminationQuestionBankQuery;
 import com.cbtpulsegrid.backend.questionbank.QuestionDifficulty;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -213,37 +215,50 @@ public class ExamService {
 		UUID institutionId = authorization.requireManagementAccess(actor);
 		institutionService.requireActive(institutionId);
 		Exam exam = requireOwnedExamWithRules(institutionId, id);
-		requireDraft(exam);
-		questionBankQuery.requireActiveSubject(institutionId, exam.getSubjectId());
-		validateDefinition(
-				exam.getSubjectId(),
-				exam.getTitle(),
-				exam.getDurationMinutes(),
-				exam.getStartsAt(),
-				exam.getEndsAt(),
-				toPoolRuleRequests(exam.getPoolRules())
-		);
-		normalizePassMark(exam.getPassMarkPercentage());
-		if (!exam.isAccessPinConfigured()) {
-			throw new IllegalArgumentException("Exam access PIN must be configured before publishing");
-		}
-		if (examCandidateRepository.countByExamId(exam.getId()) < 1) {
-			throw new IllegalArgumentException("At least one candidate must be assigned before publishing");
-		}
-		for (ExamPoolRule rule : exam.getPoolRules()) {
-			long available = questionBankQuery.countPublishedQuestions(
-					institutionId,
+		try {
+			requireDraft(exam);
+			questionBankQuery.requireActiveSubject(institutionId, exam.getSubjectId());
+			validateDefinition(
 					exam.getSubjectId(),
-					rule.getDifficulty()
+					exam.getTitle(),
+					exam.getDurationMinutes(),
+					exam.getStartsAt(),
+					exam.getEndsAt(),
+					toPoolRuleRequests(exam.getPoolRules())
 			);
-			if (available < rule.getQuestionCount()) {
-				throw new IllegalArgumentException(
-						"Not enough PUBLISHED questions for difficulty " + rule.getDifficulty()
+			normalizePassMark(exam.getPassMarkPercentage());
+			if (!exam.isAccessPinConfigured()) {
+				throw new IllegalArgumentException("Exam access PIN must be configured before publishing");
+			}
+			if (examCandidateRepository.countByExamId(exam.getId()) < 1) {
+				throw new IllegalArgumentException("At least one candidate must be assigned before publishing");
+			}
+			for (ExamPoolRule rule : exam.getPoolRules()) {
+				long available = questionBankQuery.countPublishedQuestions(
+						institutionId,
+						exam.getSubjectId(),
+						rule.getDifficulty()
 				);
+				if (available < rule.getQuestionCount()) {
+					throw new IllegalArgumentException(
+							"Not enough published questions for difficulty " + rule.getDifficulty()
+					);
+				}
 			}
 		}
+		catch (IllegalArgumentException exception) {
+			throw new ApiValidationException(exception.getMessage(), exception);
+		}
 		exam.setStatus(ExamStatus.PUBLISHED);
-		Exam saved = examRepository.saveAndFlush(exam);
+		Exam saved;
+		try {
+			saved = examRepository.saveAndFlush(exam);
+		}
+		catch (OptimisticLockingFailureException exception) {
+			throw new com.cbtpulsegrid.backend.identity.ApiConflictException(
+					"Exam was changed by another request; refresh and try again"
+			);
+		}
 		auditTrail.record(institutionId, AuditAction.EXAM_PUBLISHED, AuditResourceType.EXAM, id, Map.of("status", saved.getStatus()));
 		return toDetail(saved);
 	}

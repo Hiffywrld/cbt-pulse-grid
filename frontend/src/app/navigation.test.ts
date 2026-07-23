@@ -22,4 +22,13 @@ describe('role-aware navigation', () => {
     expect(adminLabels).toContain('User accounts')
     expect(adminLabels).toContain('Audit trail')
   })
+
+  it('matches academic and examination navigation to backend staff roles', () => {
+    const examinerLabels = navigationFor({ id: '2', email: 'examiner@example.edu', institutionId: 'i1', roles: ['EXAMINER'] }).map((item) => item.label)
+    const invigilatorLabels = navigationFor({ id: '4', email: 'invigilator@example.edu', institutionId: 'i1', roles: ['INVIGILATOR'] }).map((item) => item.label)
+    expect(examinerLabels).toEqual(expect.arrayContaining(['Subjects', 'Question bank', 'Examinations']))
+    expect(invigilatorLabels).toContain('Examinations')
+    expect(invigilatorLabels).not.toContain('Subjects')
+    expect(invigilatorLabels).not.toContain('Question bank')
+  })
 })

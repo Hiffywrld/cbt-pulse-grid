@@ -18,6 +18,22 @@ const memoryStore = (initial: StoredSession | null = oldSession) => {
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
 describe('ApiClient authentication recovery', () => {
+  it('sends bodyless POST operations without inventing JSON content', async () => {
+    const { store } = memoryStore()
+    const fetcher = vi.fn().mockResolvedValue(json({ status: 'PUBLISHED' })) as unknown as typeof fetch
+    const client = new ApiClient('http://localhost:8080', store, fetcher)
+
+    await client.request('/api/v1/exams/exam-1/publish', { method: 'POST' })
+
+    expect(fetcher).toHaveBeenCalledWith(
+      'http://localhost:8080/api/v1/exams/exam-1/publish',
+      expect.objectContaining({ method: 'POST', body: undefined }),
+    )
+    const headers = (fetcher as ReturnType<typeof vi.fn>).mock.calls[0][1]?.headers as Headers
+    expect(headers.get('Authorization')).toBe('Bearer old-access')
+    expect(headers.get('Content-Type')).toBeNull()
+  })
+
   it('preserves backend authentication errors instead of reporting a network failure', async () => {
     const { store } = memoryStore(null)
     const fetcher = vi.fn().mockResolvedValue(json({

@@ -1,5 +1,6 @@
 package com.cbtpulsegrid.backend.identity.auth;
 
+import com.cbtpulsegrid.backend.ApiValidationException;
 import com.cbtpulsegrid.backend.identity.ApiConflictException;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -49,6 +50,16 @@ class AuthExceptionHandlerTests {
                 .andExpect(jsonPath("$.message").value("Attempt state conflict"));
     }
 
+    @Test
+    void safeApiValidationMessagesAreReturnedWithoutInternalDetails() throws Exception {
+        mockMvc.perform(get("/test/validation"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Not enough published questions for difficulty EASY"))
+                .andExpect(content().string(not(containsString("IllegalArgumentException"))));
+    }
+
     @RestController
     static class FailingController {
 
@@ -60,6 +71,11 @@ class AuthExceptionHandlerTests {
         @GetMapping("/test/conflict")
         void conflict() {
             throw new ApiConflictException("Attempt state conflict");
+        }
+
+        @GetMapping("/test/validation")
+        void validation() {
+            throw new ApiValidationException("Not enough published questions for difficulty EASY");
         }
     }
 }

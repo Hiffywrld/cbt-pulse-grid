@@ -4,7 +4,7 @@
 
 This document locks the frontend product boundaries for CBT-Pulse Grid. New screens must follow the backend's role and tenant rules, use candidate-safe contracts, and preserve offline-first examination delivery. Frontend visibility improves usability but never replaces backend authorization.
 
-Phase 1 provides authentication, session restoration, route protection, navigation, responsive layout, connectivity awareness, and reusable UI foundations. Phase 2 connects platform administration, tenant user management, role dashboards, and candidate-safe assigned-exam discovery to the real backend contracts.
+Phase 1 provides authentication, session restoration, route protection, navigation, responsive layout, connectivity awareness, and reusable UI foundations. Phase 2 connects platform administration, tenant user management, role dashboards, and candidate-safe assigned-exam discovery to the real backend contracts. Phase 3 connects tenant academic content and staff examination preparation, including lifecycle and candidate assignment.
 
 ## Locked role and page matrix
 
@@ -28,7 +28,7 @@ Phase 1 provides authentication, session restoration, route protection, navigati
 
 ## Responsive behaviour
 
-- At wide desktop widths, the authenticated shell uses a persistent deep-navy sidebar, top bar, page heading, and content workspace.
+- At wide desktop widths, the authenticated shell uses a persistent deep-emerald sidebar, top bar, page heading, and content workspace.
 - On smaller desktop widths, the sidebar collapses to an icon rail while preserving accessible labels through tooltips/titles.
 - On tablets and phones, the persistent sidebar becomes a keyboard-accessible navigation drawer with a dismissible backdrop. Primary identity and logout controls remain available in the top bar.
 - Forms use single-column layouts on narrow screens, large touch targets, visible labels, and field-level errors.
@@ -39,11 +39,10 @@ Phase 1 provides authentication, session restoration, route protection, navigati
 
 1. **Foundation and authentication** — environment validation, typed native-fetch client, refresh rotation, protected/role routes, application shell, connectivity state, design system, and test infrastructure.
 2. **Platform, identity, and assigned-exam portals (completed)** — institution lifecycle management and institution-administrator provisioning for `SUPER_ADMIN`; tenant-safe staff/student account management for `INSTITUTION_ADMIN`; real role dashboards; student identity, assigned-exam availability, details, instructions, and a secure PIN-step hand-off. The PIN is not submitted until the full runner exists because successful backend validation starts the authoritative attempt timer.
-3. **Academic content** — subjects and staff-only question-bank authoring, validation, publishing, and filtering.
-4. **Exam preparation** — exam lifecycle, pool rules, PIN rotation, candidate assignment, and staff result configuration.
-5. **Candidate delivery** — PIN/device start, secure attempt package, autosave, resume, timer, and submission. Assigned-exam discovery and instructions were completed in Phase 2.
-6. **Invigilation and reporting** — heartbeat and browser-event capture, authenticated STOMP dashboard, monitoring history, result reporting, CSV export, and audit history.
-7. **Operational refinement** — accessibility audit, performance profiling, deployment-aware configuration, offline recovery drills, and end-to-end institutional acceptance tests.
+3. **Academic content and exam preparation (completed)** — responsive subject management and examiner read access; staff-only question authoring with answer-structure validation and publishing; exam schedules, pool rules, pass marks, secure PIN rotation, lifecycle transitions, and paginated candidate assignment. Invigilators receive published read-only exam/candidate access. The current identity contract limits eligible-student search to institution administrators, so examiners cannot independently search candidates until the backend exposes a narrow examination-facing candidate-search contract.
+4. **Candidate delivery** — PIN/device start, secure attempt package, autosave, resume, timer, and submission. Assigned-exam discovery and instructions were completed in Phase 2.
+5. **Invigilation and reporting** — heartbeat and browser-event capture, authenticated STOMP dashboard, monitoring history, result reporting, CSV export, and audit history.
+6. **Operational refinement** — accessibility audit, performance profiling, deployment-aware configuration, offline recovery drills, and end-to-end institutional acceptance tests.
 
 Later phases may integrate only backend capabilities that exist and must keep DTOs separate where candidate safety requires it.
 

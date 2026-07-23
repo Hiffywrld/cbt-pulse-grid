@@ -3,8 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#071a35" />
+    <meta name="theme-color" content="#F5F8F6" />
     <meta name="description" content="Secure institutional computer-based testing workspace" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      (() => {
+        let stored = null
+        try { stored = localStorage.getItem('cbt-pulse-grid-theme') } catch { /* use system preference */ }
+        const preference = ['LIGHT', 'DARK', 'SYSTEM'].includes(stored) ? stored : 'SYSTEM'
+        const theme = preference === 'SYSTEM'
+          ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : preference.toLowerCase()
+        document.documentElement.dataset.theme = theme
+        document.documentElement.dataset.themePreference = preference.toLowerCase()
+        document.documentElement.style.colorScheme = theme
+        document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#08110D' : '#F5F8F6'
+      })()
+    </script>
     <title>CBT-Pulse Grid</title>
   </head>
   <body>

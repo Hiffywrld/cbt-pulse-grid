@@ -1,4 +1,4 @@
-import { forwardRef, type InputHTMLAttributes } from 'react'
+import { forwardRef, useId, type InputHTMLAttributes } from 'react'
 
 export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   label: string
@@ -8,7 +8,8 @@ export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, hint, id, className = '', ...props }, ref) => {
-    const inputId = id ?? props.name
+    const generatedId = useId()
+    const inputId = id ?? props.name ?? generatedId
     const describedBy = error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined
     return (
       <div className={`field ${className}`.trim()}>

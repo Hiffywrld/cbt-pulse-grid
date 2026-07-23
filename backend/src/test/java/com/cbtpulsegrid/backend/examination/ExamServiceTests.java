@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.ApiValidationException;
 import com.cbtpulsegrid.backend.audit.AuditTrail;
 import com.cbtpulsegrid.backend.examination.api.AssignExamCandidatesRequest;
 import com.cbtpulsegrid.backend.examination.api.CreateExamRequest;
@@ -147,7 +148,7 @@ class ExamServiceTests {
 		)).thenReturn(2L);
 
 		assertThrows(
-				IllegalArgumentException.class,
+				ApiValidationException.class,
 				() -> examService.publish(manager(INSTITUTION_ID), examId)
 		);
 		verify(examRepository, never()).saveAndFlush(exam);

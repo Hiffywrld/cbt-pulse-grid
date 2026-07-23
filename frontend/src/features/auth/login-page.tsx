@@ -50,7 +50,7 @@ export const LoginPage = () => {
           <span><strong>CBT-Pulse</strong><small>GRID</small></span>
         </a>
         <div className="login-story__content">
-          <p className="eyebrow eyebrow--cyan">Institutional examination infrastructure</p>
+          <p className="eyebrow eyebrow--accent">Institutional examination infrastructure</p>
           <h1>Every exam signal.<br />One secure grid.</h1>
           <p>Coordinate high-concurrency assessments across connected or offline-first institutional networks.</p>
           <ul className="trust-list">

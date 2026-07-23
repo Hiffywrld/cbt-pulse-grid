@@ -88,7 +88,7 @@ public class SubjectService {
 		validatePage(page, size);
 		PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "code"));
 		Page<SubjectResponse> result = subjectRepository
-				.search(institutionId, normalizeSearch(search), status, pageRequest)
+				.findAll(SubjectSpecifications.filteredBy(institutionId, status, normalizeSearch(search)), pageRequest)
 				.map(SubjectService::toResponse);
 		return QuestionBankPageResponse.from(result);
 	}

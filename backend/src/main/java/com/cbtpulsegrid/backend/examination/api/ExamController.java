@@ -128,7 +128,8 @@ public class ExamController {
 			@ApiResponse(responseCode = "400", description = "Publication prerequisites are not satisfied"),
 			@ApiResponse(responseCode = "401", description = "Authentication is required"),
 			@ApiResponse(responseCode = "403", description = "Role or institution access is denied"),
-			@ApiResponse(responseCode = "404", description = "Exam or subject not found")
+			@ApiResponse(responseCode = "404", description = "Exam or subject not found"),
+			@ApiResponse(responseCode = "409", description = "Exam was concurrently changed")
 	})
 	public ExamDetailResponse publish(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
 		return examService.publish(ExamActor.from(jwt), id);

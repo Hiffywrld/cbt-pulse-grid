@@ -7,10 +7,14 @@ import { RoleRoute } from '../features/auth/role-route'
 import { homeForUser } from '../features/auth/role-routing'
 import { useAuth } from '../features/auth/use-auth'
 import { DashboardPage } from '../features/dashboard/dashboard-page'
+import { ExamDetailPage } from '../features/exams/exam-detail-page'
+import { ExamsPage } from '../features/exams/exams-page'
 import { InstitutionsPage } from '../features/institutions/institutions-page'
+import { QuestionsPage } from '../features/questions/questions-page'
 import { StudentExamDetailPage } from '../features/student/student-exam-detail-page'
 import { StudentExamStartPage } from '../features/student/student-exam-start-page'
 import { StudentExamsPage } from '../features/student/student-exams-page'
+import { SubjectsPage } from '../features/subjects/subjects-page'
 import { UsersPage } from '../features/users/users-page'
 import type { Role } from '../types/auth'
 import { NotFoundPage, UnauthorizedPage } from './error-pages'
@@ -47,9 +51,10 @@ export const AppRoutes = () => (
         <Route element={<AppShell />}>
           <Route path="/institution" element={<DashboardPage area="institution" />} />
           <Route path="/institution/users" element={<RoleOnly roles={['INSTITUTION_ADMIN']} element={<UsersPage mode="institution" />} />} />
-          <Route path="/institution/subjects" element={<RoleOnly roles={['INSTITUTION_ADMIN', 'EXAMINER']} page="subjects" />} />
-          <Route path="/institution/questions" element={<RoleOnly roles={['INSTITUTION_ADMIN', 'EXAMINER']} page="questions" />} />
-          <Route path="/institution/exams" element={<Placeholder page="exams" />} />
+          <Route path="/institution/subjects" element={<RoleOnly roles={['INSTITUTION_ADMIN', 'EXAMINER']} element={<SubjectsPage />} />} />
+          <Route path="/institution/questions" element={<RoleOnly roles={['INSTITUTION_ADMIN', 'EXAMINER']} element={<QuestionsPage />} />} />
+          <Route path="/institution/exams" element={<ExamsPage />} />
+          <Route path="/institution/exams/:examId" element={<ExamDetailPage />} />
           <Route path="/institution/monitoring" element={<Placeholder page="monitoring" />} />
           <Route path="/institution/results" element={<Placeholder page="results" />} />
           <Route path="/institution/audit" element={<RoleOnly roles={['INSTITUTION_ADMIN']} page="audit" />} />

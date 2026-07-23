@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
+import com.cbtpulsegrid.backend.ApiValidationException;
 import com.cbtpulsegrid.backend.RequestCorrelation;
 import com.cbtpulsegrid.backend.identity.ApiConflictException;
 import org.slf4j.Logger;
@@ -63,6 +64,19 @@ public class AuthExceptionHandler {
 		return response(
 				HttpStatus.BAD_REQUEST,
 				"Request validation failed",
+				request,
+				Map.of()
+		);
+	}
+
+	@ExceptionHandler(ApiValidationException.class)
+	public ResponseEntity<ApiError> handleApiValidation(
+			ApiValidationException exception,
+			HttpServletRequest request
+	) {
+		return response(
+				HttpStatus.BAD_REQUEST,
+				exception.getMessage() == null ? "Request validation failed" : exception.getMessage(),
 				request,
 				Map.of()
 		);
