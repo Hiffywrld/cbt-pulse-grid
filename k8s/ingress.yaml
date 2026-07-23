@@ -1,0 +1,38 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cbt-pulse-grid
+  namespace: cbt-pulse-grid
+  labels:
+    app.kubernetes.io/name: cbt-pulse-grid
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: <frontend-hostname>
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: cbt-pulse-grid-backend
+                port:
+                  name: http
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: cbt-pulse-grid-backend
+                port:
+                  name: http
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cbt-pulse-grid-frontend
+                port:
+                  name: http

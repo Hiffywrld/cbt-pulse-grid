@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cbt-pulse-grid-postgres
+  namespace: cbt-pulse-grid
+  labels:
+    app.kubernetes.io/name: cbt-pulse-grid
+    app.kubernetes.io/component: postgres
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cbt-pulse-grid
+    app.kubernetes.io/component: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cbt-pulse-grid-backend
+  namespace: cbt-pulse-grid
+  labels:
+    app.kubernetes.io/name: cbt-pulse-grid
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cbt-pulse-grid
+    app.kubernetes.io/component: backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cbt-pulse-grid-frontend
+  namespace: cbt-pulse-grid
+  labels:
+    app.kubernetes.io/name: cbt-pulse-grid
+    app.kubernetes.io/component: frontend
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cbt-pulse-grid
+    app.kubernetes.io/component: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

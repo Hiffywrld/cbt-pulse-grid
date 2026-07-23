@@ -1,19 +1,34 @@
 import { z } from 'zod'
 
-const httpUrl = z.string().url().refine(
-  (value) => value.startsWith('http://') || value.startsWith('https://'),
-  'must use http or https',
-)
+const httpUrl = z.string().refine((value) => {
+  if (value === '') {
+    return true
+  }
+  if (value.startsWith('/')) {
+    return true
+  }
+  const parsed = z.string().url().safeParse(value)
+  return parsed.success && (value.startsWith('http://') || value.startsWith('https://'))
+}, 'must use http, https, an empty same-origin base or a same-origin path')
 
-const websocketUrl = z.string().url().refine(
-  (value) => value.startsWith('ws://') || value.startsWith('wss://'),
-  'must use ws or wss',
-)
+const websocketUrl = z.string().refine((value) => {
+  if (value.startsWith('/')) {
+    return true
+  }
+  const parsed = z.string().url().safeParse(value)
+  return parsed.success && (value.startsWith('ws://') || value.startsWith('wss://'))
+}, 'must use ws, wss or a same-origin path')
 
 const environmentSchema = z.object({
   VITE_API_BASE_URL: httpUrl,
   VITE_WS_URL: websocketUrl,
 })
+
+declare global {
+  interface Window {
+    __CBT_PULSE_GRID_CONFIG__?: Partial<Record<'VITE_API_BASE_URL' | 'VITE_WS_URL', string>>
+  }
+}
 
 export type FrontendEnvironment = {
   apiBaseUrl: string
@@ -35,6 +50,12 @@ export const parseEnvironment = (
 }
 
 export const environment = parseEnvironment({
-  VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080',
-  VITE_WS_URL: import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080/ws',
+  VITE_API_BASE_URL:
+    globalThis.window?.__CBT_PULSE_GRID_CONFIG__?.VITE_API_BASE_URL ??
+    import.meta.env.VITE_API_BASE_URL ??
+    'http://localhost:8080',
+  VITE_WS_URL:
+    globalThis.window?.__CBT_PULSE_GRID_CONFIG__?.VITE_WS_URL ??
+    import.meta.env.VITE_WS_URL ??
+    'ws://localhost:8080/ws',
 })

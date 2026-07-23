@@ -1,0 +1,112 @@
+name: Main CI and GHCR Publish
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: cbt_pulse_grid
+          POSTGRES_USER: cbt_admin
+          POSTGRES_PASSWORD: cbt_dev_password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U cbt_admin -d cbt_pulse_grid"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: Run Maven tests and Spring Modulith verification
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5433"
+          POSTGRES_DB: cbt_pulse_grid
+          POSTGRES_USER: cbt_admin
+          POSTGRES_PASSWORD: cbt_dev_password
+          JWT_SECRET: cbt-pulse-grid-ci-test-secret-with-more-than-32-characters
+          WEBHOOK_MASTER_KEY: ""
+        run: ./mvnw -B test
+      - name: Package backend
+        run: ./mvnw -B -DskipTests package
+
+  frontend:
+    name: Frontend Checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:run -- --maxWorkers=1
+      - run: npm run build
+
+  publish:
+    name: Publish Docker Images
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute lowercase image namespace
+        id: image
+        shell: bash
+        run: |
+          repo="${GITHUB_REPOSITORY,,}"
+          echo "backend=${REGISTRY}/${repo}/cbt-pulse-grid-backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=${REGISTRY}/${repo}/cbt-pulse-grid-frontend" >> "$GITHUB_OUTPUT"
+      - name: Publish backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: backend
+          push: true
+          tags: |
+            ${{ steps.image.outputs.backend }}:${{ github.sha }}
+            ${{ steps.image.outputs.backend }}:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+      - name: Publish frontend image
+        uses: docker/build-push-action@v7
+        with:
+          context: frontend
+          push: true
+          tags: |
+            ${{ steps.image.outputs.frontend }}:${{ github.sha }}
+            ${{ steps.image.outputs.frontend }}:latest
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
