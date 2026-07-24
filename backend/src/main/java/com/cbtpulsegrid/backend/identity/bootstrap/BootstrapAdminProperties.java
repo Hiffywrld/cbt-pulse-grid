@@ -10,6 +10,7 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties(prefix = "app.bootstrap-admin")
 public record BootstrapAdminProperties(
 		boolean enabled,
+		boolean forceReset,
 		@NotBlank @Email String email,
 		@NotBlank String password
 ) {

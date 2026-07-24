@@ -11,10 +11,13 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class DevelopmentAdminInitializer implements ApplicationRunner {
 
+	private static final Logger log = LoggerFactory.getLogger(DevelopmentAdminInitializer.class);
 	private static final String ADMIN_FIRST_NAME = "System";
 	private static final String ADMIN_LAST_NAME = "Administrator";
 
@@ -35,11 +38,34 @@ public class DevelopmentAdminInitializer implements ApplicationRunner {
 	@Override
 	@Transactional
 	public void run(ApplicationArguments arguments) {
-		if (!properties.enabled() || userRepository.countByRolesContaining(Role.SUPER_ADMIN) > 0) {
+		if (!properties.enabled()) {
 			return;
 		}
 
 		String email = properties.email().trim().toLowerCase(Locale.ROOT);
+		if (properties.forceReset()) {
+			userRepository.findByEmailIgnoreCase(email)
+					.ifPresentOrElse(
+							admin -> {
+								admin.setPasswordHash(passwordEncoder.encode(properties.password()));
+								admin.setStatus(UserStatus.ACTIVE);
+								admin.getRoles().add(Role.SUPER_ADMIN);
+								userRepository.save(admin);
+								log.warn("Bootstrap admin recovery ran for configured email");
+							},
+							() -> createBootstrapAdmin(email)
+					);
+			return;
+		}
+
+		if (userRepository.countByRolesContaining(Role.SUPER_ADMIN) > 0) {
+			return;
+		}
+
+		createBootstrapAdmin(email);
+	}
+
+	private void createBootstrapAdmin(String email) {
 		User admin = new User(
 				ADMIN_FIRST_NAME,
 				ADMIN_LAST_NAME,

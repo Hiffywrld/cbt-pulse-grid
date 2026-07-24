@@ -17,6 +17,8 @@ Backend:
 - `MONITORING_WEBSOCKET_ALLOWED_ORIGINS`: deployed frontend origin.
 - `WEBHOOK_MASTER_KEY`: Base64-encoded 32-byte key when webhooks are enabled.
 - `WEBHOOK_ENABLED`: `true` only after the master key and endpoint policy are ready.
+- `BOOTSTRAP_ADMIN_ENABLED`: `true` only for controlled first-admin creation or recovery.
+- `BOOTSTRAP_ADMIN_FORCE_RESET`: keep `false` normally; set to `true` only for a one-time password recovery of the configured bootstrap admin.
 - `BOOTSTRAP_ADMIN_EMAIL`: initial administrator email, if bootstrap is enabled.
 - `BOOTSTRAP_ADMIN_PASSWORD`: initial administrator password, if bootstrap is enabled.
 

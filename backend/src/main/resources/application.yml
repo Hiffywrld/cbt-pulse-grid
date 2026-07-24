@@ -33,6 +33,7 @@ app:
     secret: ${JWT_SECRET:cbt-pulse-grid-local-development-secret-2026}
   bootstrap-admin:
     enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
+    force-reset: ${BOOTSTRAP_ADMIN_FORCE_RESET:false}
     email: ${BOOTSTRAP_ADMIN_EMAIL:admin@cbtpulse.local}
     password: "${BOOTSTRAP_ADMIN_PASSWORD:Admin123!}"
   monitoring:
