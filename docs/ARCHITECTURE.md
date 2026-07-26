@@ -56,3 +56,9 @@ The audit module owns an append-only institutional event log. Domain services wr
 Every REST request receives a UUID correlation identifier in `X-Request-Id`. A valid caller-supplied UUID is preserved; an absent value is generated; malformed or ambiguous values are rejected. The identifier is returned in response headers and JSON errors and is included in server log context. REST CORS origins are independently configured with `REST_CORS_ALLOWED_ORIGINS`.
 
 Actuator exposes only health and info through the web endpoint set. Liveness and readiness probe groups are enabled, health details and component structure are suppressed, and existing security rules keep health probes public while protecting info.
+
+## Microservices extraction status
+
+On the `feature/microservices` branch, the system is being extracted behind `api-gateway` while preserving public API paths for the React frontend. Identity, examination, and monitoring are now separately runnable service containers. The original backend remains as a compatibility fallback for routes not yet owned by an extracted service.
+
+The current extraction deliberately keeps a shared PostgreSQL instance and the existing Flyway history to avoid destructive data migration. Logical table ownership and remaining technical debt are documented in `docs/MICROSERVICES_PHASE_3.md` and `docs/MICROSERVICES_PHASE_4_5.md`.
