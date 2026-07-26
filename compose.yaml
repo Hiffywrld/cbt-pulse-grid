@@ -60,7 +60,7 @@ services:
       WEBHOOK_BATCH_SIZE: ${WEBHOOK_BATCH_SIZE:-25}
       WEBHOOK_MAXIMUM_ATTEMPTS: ${WEBHOOK_MAXIMUM_ATTEMPTS:-8}
     ports:
-      - "${BACKEND_PORT:-8080}:8080"
+      - "${BACKEND_PORT:-18080}:8080"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health/readiness || exit 1"]
       interval: 10s
@@ -70,13 +70,31 @@ services:
     networks:
       - cbt-pulse-grid
 
+  api-gateway:
+    build:
+      context: ./api-gateway
+    image: cbt-pulse-grid-api-gateway:local
+    container_name: cbt-pulse-grid-api-gateway
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    networks:
+      - cbt-pulse-grid
   frontend:
     build:
       context: ./frontend
     image: cbt-pulse-grid-frontend:local
     container_name: cbt-pulse-grid-frontend
     depends_on:
-      backend:
+      api-gateway:
         condition: service_healthy
     environment:
       VITE_API_BASE_URL: ${FRONTEND_API_BASE_URL:-}
