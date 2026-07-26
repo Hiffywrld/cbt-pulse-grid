@@ -1,6 +1,65 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: cbt-pulse-grid-identity-service
+  namespace: cbt-pulse-grid
+  labels:
+    app.kubernetes.io/name: cbt-pulse-grid
+    app.kubernetes.io/component: identity-service
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cbt-pulse-grid
+      app.kubernetes.io/component: identity-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cbt-pulse-grid
+        app.kubernetes.io/component: identity-service
+    spec:
+      containers:
+        - name: identity-service
+          image: ghcr.io/<owner>/<repository>/cbt-pulse-grid-identity-service:<tag>
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+              name: http
+          envFrom:
+            - configMapRef:
+                name: cbt-pulse-grid-config
+            - secretRef:
+                name: cbt-pulse-grid-secrets
+          env:
+            - name: PORT
+              value: "8081"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 150m
+              memory: 384Mi
+            limits:
+              cpu: 750m
+              memory: 768Mi
+---apiVersion: apps/v1
+kind: Deployment
+metadata:
   name: cbt-pulse-grid-api-gateway
   namespace: cbt-pulse-grid
   labels:

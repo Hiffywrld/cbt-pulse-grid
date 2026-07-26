@@ -4,3 +4,4 @@ backend/target/
 frontend/node_modules/
 .vscode/
 .idea/
+identity-service/target
