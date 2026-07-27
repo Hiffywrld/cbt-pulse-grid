@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.cbtpulsegrid.backend.audit.AuditTrail;
+import com.cbtpulsegrid.backend.identity.ApiConflictException;
 import com.cbtpulsegrid.backend.identity.Role;
 import com.cbtpulsegrid.backend.identity.User;
 import com.cbtpulsegrid.backend.identity.UserRepository;
@@ -21,6 +22,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -209,15 +211,80 @@ class UserAccountServiceTests {
 	@Test
 	void rejectsCrossInstitutionUserAccess() {
 		UUID userId = UUID.randomUUID();
-		User user = new User("Other", "Student", "other@student.edu", "hash", UserStatus.ACTIVE);
-		user.setInstitutionId(OTHER_INSTITUTION_ID);
-		user.getRoles().add(Role.STUDENT);
+		User user = user(userId, OTHER_INSTITUTION_ID, Role.STUDENT);
 		when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
 		assertThrows(
 				AccessDeniedException.class,
 				() -> userAccountService.get(institutionAdmin(INSTITUTION_ID), userId)
 		);
+	}
+
+	@Test
+	void institutionAdminCannotSuspendOwnAccount() {
+		UUID actorId = UUID.randomUUID();
+		User user = user(actorId, INSTITUTION_ID, Role.INSTITUTION_ADMIN);
+		when(userRepository.findById(actorId)).thenReturn(Optional.of(user));
+
+		ApiConflictException exception = assertThrows(
+				ApiConflictException.class,
+				() -> userAccountService.changeStatus(
+						institutionAdmin(actorId, INSTITUTION_ID),
+						actorId,
+						UserStatus.INACTIVE
+				)
+		);
+
+		assertEquals("You cannot suspend your own account.", exception.getMessage());
+		verify(userRepository, never()).saveAndFlush(any());
+	}
+
+	@Test
+	void superAdminCannotSuspendOwnAccount() {
+		UUID actorId = UUID.randomUUID();
+		User user = user(actorId, null, Role.SUPER_ADMIN);
+		when(userRepository.findById(actorId)).thenReturn(Optional.of(user));
+
+		assertThrows(
+				ApiConflictException.class,
+				() -> userAccountService.changeStatus(superAdmin(actorId), actorId, UserStatus.INACTIVE)
+		);
+		verify(userRepository, never()).saveAndFlush(any());
+	}
+
+	@Test
+	void authorizedAdminCanSuspendAnotherEligibleUser() {
+		UUID actorId = UUID.randomUUID();
+		UUID userId = UUID.randomUUID();
+		User user = user(userId, INSTITUTION_ID, Role.STUDENT);
+		when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+		when(userRepository.saveAndFlush(user)).thenReturn(user);
+
+		UserResponse response = userAccountService.changeStatus(
+				institutionAdmin(actorId, INSTITUTION_ID),
+				userId,
+				UserStatus.INACTIVE
+		);
+
+		assertEquals(UserStatus.INACTIVE, response.status());
+		verify(userRepository).saveAndFlush(user);
+	}
+
+	@Test
+	void crossTenantSuspensionRemainsForbidden() {
+		UUID userId = UUID.randomUUID();
+		User user = user(userId, OTHER_INSTITUTION_ID, Role.STUDENT);
+		when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+		assertThrows(
+				AccessDeniedException.class,
+				() -> userAccountService.changeStatus(
+						institutionAdmin(UUID.randomUUID(), INSTITUTION_ID),
+						userId,
+						UserStatus.INACTIVE
+				)
+		);
+		verify(userRepository, never()).saveAndFlush(any());
 	}
 
 	private static CreateUserRequest studentRequest(UUID institutionId, String email, String registrationNumber) {
@@ -236,7 +303,23 @@ class UserAccountServiceTests {
 		return new ActorContext(UUID.randomUUID(), null, Set.of(Role.SUPER_ADMIN));
 	}
 
+	private static ActorContext superAdmin(UUID userId) {
+		return new ActorContext(userId, null, Set.of(Role.SUPER_ADMIN));
+	}
+
 	private static ActorContext institutionAdmin(UUID institutionId) {
 		return new ActorContext(UUID.randomUUID(), institutionId, Set.of(Role.INSTITUTION_ADMIN));
+	}
+
+	private static ActorContext institutionAdmin(UUID userId, UUID institutionId) {
+		return new ActorContext(userId, institutionId, Set.of(Role.INSTITUTION_ADMIN));
+	}
+
+	private static User user(UUID id, UUID institutionId, Role role) {
+		User user = new User("Test", "User", id + "@example.test", "hash", UserStatus.ACTIVE);
+		ReflectionTestUtils.setField(user, "id", id);
+		user.setInstitutionId(institutionId);
+		user.getRoles().add(role);
+		return user;
 	}
 }

@@ -1,0 +1,14 @@
+package com.cbtpulsegrid.backend.audit;
+
+public enum AuditResourceType {
+	INSTITUTION,
+	USER,
+	SUBJECT,
+	QUESTION,
+	EXAM,
+	EXAM_CANDIDATE,
+	ATTEMPT,
+	WEBHOOK_SUBSCRIPTION,
+	WEBHOOK_DELIVERY,
+	MONITORING_STATE
+}

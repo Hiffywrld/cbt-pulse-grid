@@ -7,9 +7,18 @@ permissions:
   contents: read
   packages: read
 
+env:
+  POSTGRES_DB: cbt_pulse_grid
+  POSTGRES_USER: cbt_admin
+  POSTGRES_PASSWORD: cbt_dev_password
+  POSTGRES_HOST: localhost
+  POSTGRES_PORT: "5433"
+  JWT_SECRET: cbt-pulse-grid-ci-test-secret-with-more-than-32-characters
+  WEBHOOK_MASTER_KEY: ""
+
 jobs:
-  backend:
-    name: Backend Tests
+  identity-service:
+    name: Identity Service Tests
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -25,9 +34,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -35,18 +41,85 @@ jobs:
           distribution: temurin
           java-version: "25"
           cache: maven
-      - name: Run Maven tests and Spring Modulith verification
+      - run: mvn -B -f identity-service/pom.xml test
+
+  examination-service:
+    name: Examination Service Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
         env:
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: "5433"
           POSTGRES_DB: cbt_pulse_grid
           POSTGRES_USER: cbt_admin
           POSTGRES_PASSWORD: cbt_dev_password
-          JWT_SECRET: cbt-pulse-grid-ci-test-secret-with-more-than-32-characters
-          WEBHOOK_MASTER_KEY: ""
-        run: ./mvnw -B test
-      - name: Package backend
-        run: ./mvnw -B -DskipTests package
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U cbt_admin -d cbt_pulse_grid"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - run: mvn -B -f examination-service/pom.xml test
+
+  monitoring-service:
+    name: Monitoring Service Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: cbt_pulse_grid
+          POSTGRES_USER: cbt_admin
+          POSTGRES_PASSWORD: cbt_dev_password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U cbt_admin -d cbt_pulse_grid"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - run: mvn -B -f monitoring-service/pom.xml test
+
+  compatibility-backend:
+    name: Compatibility Backend Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: cbt_pulse_grid
+          POSTGRES_USER: cbt_admin
+          POSTGRES_PASSWORD: cbt_dev_password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U cbt_admin -d cbt_pulse_grid"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - run: mvn -B -f backend/pom.xml test
 
   frontend:
     name: Frontend Checks
@@ -66,26 +139,51 @@ jobs:
       - run: npm run test:run -- --maxWorkers=1
       - run: npm run build
 
-  docker:
-    name: Docker Build
+  manifests:
+    name: Kubernetes Manifest Validation
     runs-on: ubuntu-latest
-    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate Kubernetes manifests offline
+        run: |
+          curl -sSL -o kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz
+          tar -xzf kubeconform.tar.gz kubeconform
+          ./kubeconform -strict -summary k8s/
+
+  docker:
+    name: Docker Build Validation
+    runs-on: ubuntu-latest
+    needs:
+      - identity-service
+      - examination-service
+      - monitoring-service
+      - compatibility-backend
+      - frontend
+      - manifests
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - name: api-gateway
+            context: api-gateway
+          - name: identity-service
+            context: identity-service
+          - name: examination-service
+            context: examination-service
+          - name: monitoring-service
+            context: monitoring-service
+          - name: frontend
+            context: frontend
+          - name: compatibility-backend
+            context: backend
     steps:
       - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v4
-      - name: Build backend image
+      - name: Build ${{ matrix.image.name }}
         uses: docker/build-push-action@v7
         with:
-          context: backend
+          context: ${{ matrix.image.context }}
           push: false
-          tags: cbt-pulse-grid-backend:pr
-          cache-from: type=gha,scope=backend
-          cache-to: type=gha,mode=max,scope=backend
-      - name: Build frontend image
-        uses: docker/build-push-action@v7
-        with:
-          context: frontend
-          push: false
-          tags: cbt-pulse-grid-frontend:pr
-          cache-from: type=gha,scope=frontend
-          cache-to: type=gha,mode=max,scope=frontend
+          tags: cbt-pulse-grid-${{ matrix.image.name }}:pr
+          cache-from: type=gha,scope=${{ matrix.image.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}

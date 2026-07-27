@@ -1,0 +1,82 @@
+server:
+  port: ${PORT:8082}
+  address: 0.0.0.0
+
+spring:
+  application:
+    name: examination-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:cbt_pulse_grid}
+    username: ${POSTGRES_USER:cbt_admin}
+    password: ${POSTGRES_PASSWORD:cbt_dev_password}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+
+app:
+  cors:
+    allowed-origins: ${REST_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+  attempts:
+    expiry:
+      scan-interval: ${ATTEMPT_EXPIRY_SCAN_INTERVAL:10s}
+      batch-size: ${ATTEMPT_EXPIRY_BATCH_SIZE:50}
+  jwt:
+    issuer: ${JWT_ISSUER:cbt-pulse-grid}
+    access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:15m}
+    refresh-token-expiry: ${JWT_REFRESH_TOKEN_EXPIRY:7d}
+    secret: ${JWT_SECRET:cbt-pulse-grid-local-development-secret-2026}
+  bootstrap-admin:
+    enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
+    force-reset: ${BOOTSTRAP_ADMIN_FORCE_RESET:false}
+    email: ${BOOTSTRAP_ADMIN_EMAIL:admin@cbtpulse.local}
+    password: "${BOOTSTRAP_ADMIN_PASSWORD:Admin123!}"
+  monitoring:
+    websocket:
+      allowed-origins: ${MONITORING_WEBSOCKET_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+    missed-heartbeat:
+      scan-interval: ${MONITORING_HEARTBEAT_SCAN_INTERVAL:10s}
+      timeout: ${MONITORING_HEARTBEAT_TIMEOUT:30s}
+      batch-size: ${MONITORING_HEARTBEAT_BATCH_SIZE:100}
+  webhooks:
+    enabled: ${WEBHOOK_ENABLED:false}
+    master-key: ${WEBHOOK_MASTER_KEY:}
+    allow-private-http: ${WEBHOOK_ALLOW_PRIVATE_HTTP:false}
+    connect-timeout: ${WEBHOOK_CONNECT_TIMEOUT:3s}
+    response-timeout: ${WEBHOOK_RESPONSE_TIMEOUT:5s}
+    scan-interval: ${WEBHOOK_SCAN_INTERVAL:5s}
+    lease-duration: ${WEBHOOK_LEASE_DURATION:30s}
+    initial-backoff: ${WEBHOOK_INITIAL_BACKOFF:10s}
+    maximum-backoff: ${WEBHOOK_MAXIMUM_BACKOFF:15m}
+    batch-size: ${WEBHOOK_BATCH_SIZE:25}
+    maximum-attempts: ${WEBHOOK_MAXIMUM_ATTEMPTS:8}
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+  paths-to-match: /api/**
+  show-actuator: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+      show-components: never
+
+logging:
+  pattern:
+    level: "%5p [requestId:%X{requestId:-}]"

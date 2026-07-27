@@ -34,8 +34,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-cbt_pulse_grid}
       POSTGRES_USER: ${POSTGRES_USER:-cbt_admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cbt_dev_password}
-      REST_CORS_ALLOWED_ORIGINS: ${REST_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
-      MONITORING_WEBSOCKET_ALLOWED_ORIGINS: ${MONITORING_WEBSOCKET_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      REST_CORS_ALLOWED_ORIGINS: ${REST_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080}
+      MONITORING_WEBSOCKET_ALLOWED_ORIGINS: ${MONITORING_WEBSOCKET_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080}
       JWT_SECRET: ${JWT_SECRET:-cbt-pulse-grid-local-development-secret-2026}
       JWT_ISSUER: ${JWT_ISSUER:-cbt-pulse-grid}
       JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:-15m}
@@ -60,7 +60,7 @@ services:
       WEBHOOK_BATCH_SIZE: ${WEBHOOK_BATCH_SIZE:-25}
       WEBHOOK_MAXIMUM_ATTEMPTS: ${WEBHOOK_MAXIMUM_ATTEMPTS:-8}
     ports:
-      - "${BACKEND_PORT:-8080}:8080"
+      - "${BACKEND_PORT:-18080}:8080"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health/readiness || exit 1"]
       interval: 10s
@@ -70,13 +70,181 @@ services:
     networks:
       - cbt-pulse-grid
 
+  identity-service:
+    build:
+      context: ./identity-service
+    image: cbt-pulse-grid-identity-service:local
+    container_name: cbt-pulse-grid-identity-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 8081
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-cbt_pulse_grid}
+      POSTGRES_USER: ${POSTGRES_USER:-cbt_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cbt_dev_password}
+      REST_CORS_ALLOWED_ORIGINS: ${REST_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080}
+      JWT_SECRET: ${JWT_SECRET:-cbt-pulse-grid-local-development-secret-2026}
+      JWT_ISSUER: ${JWT_ISSUER:-cbt-pulse-grid}
+      JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:-15m}
+      JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY:-7d}
+      BOOTSTRAP_ADMIN_ENABLED: ${BOOTSTRAP_ADMIN_ENABLED:-true}
+      BOOTSTRAP_ADMIN_FORCE_RESET: ${BOOTSTRAP_ADMIN_FORCE_RESET:-false}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@cbtpulse.local}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-Admin123!}
+    ports:
+      - "${IDENTITY_SERVICE_PORT:-8081}:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8081/actuator/health/readiness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    networks:
+      - cbt-pulse-grid
+
+  examination-service:
+    build:
+      context: ./examination-service
+    image: cbt-pulse-grid-examination-service:local
+    container_name: cbt-pulse-grid-examination-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      identity-service:
+        condition: service_healthy
+    environment:
+      PORT: 8082
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-cbt_pulse_grid}
+      POSTGRES_USER: ${POSTGRES_USER:-cbt_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cbt_dev_password}
+      REST_CORS_ALLOWED_ORIGINS: ${REST_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080}
+      MONITORING_WEBSOCKET_ALLOWED_ORIGINS: ${MONITORING_WEBSOCKET_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080}
+      JWT_SECRET: ${JWT_SECRET:-cbt-pulse-grid-local-development-secret-2026}
+      JWT_ISSUER: ${JWT_ISSUER:-cbt-pulse-grid}
+      JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:-15m}
+      JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY:-7d}
+      BOOTSTRAP_ADMIN_ENABLED: ${BOOTSTRAP_ADMIN_ENABLED:-false}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@cbtpulse.local}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-Admin123!}
+      ATTEMPT_EXPIRY_SCAN_INTERVAL: ${ATTEMPT_EXPIRY_SCAN_INTERVAL:-10s}
+      ATTEMPT_EXPIRY_BATCH_SIZE: ${ATTEMPT_EXPIRY_BATCH_SIZE:-50}
+      MONITORING_HEARTBEAT_SCAN_INTERVAL: ${MONITORING_HEARTBEAT_SCAN_INTERVAL:-10s}
+      MONITORING_HEARTBEAT_TIMEOUT: ${MONITORING_HEARTBEAT_TIMEOUT:-30s}
+      MONITORING_HEARTBEAT_BATCH_SIZE: ${MONITORING_HEARTBEAT_BATCH_SIZE:-100}
+      WEBHOOK_ENABLED: ${WEBHOOK_ENABLED:-false}
+      WEBHOOK_MASTER_KEY: ${WEBHOOK_MASTER_KEY:-}
+      WEBHOOK_ALLOW_PRIVATE_HTTP: ${WEBHOOK_ALLOW_PRIVATE_HTTP:-false}
+      WEBHOOK_CONNECT_TIMEOUT: ${WEBHOOK_CONNECT_TIMEOUT:-3s}
+      WEBHOOK_RESPONSE_TIMEOUT: ${WEBHOOK_RESPONSE_TIMEOUT:-5s}
+      WEBHOOK_SCAN_INTERVAL: ${WEBHOOK_SCAN_INTERVAL:-5s}
+      WEBHOOK_LEASE_DURATION: ${WEBHOOK_LEASE_DURATION:-30s}
+      WEBHOOK_INITIAL_BACKOFF: ${WEBHOOK_INITIAL_BACKOFF:-10s}
+      WEBHOOK_MAXIMUM_BACKOFF: ${WEBHOOK_MAXIMUM_BACKOFF:-15m}
+      WEBHOOK_BATCH_SIZE: ${WEBHOOK_BATCH_SIZE:-25}
+      WEBHOOK_MAXIMUM_ATTEMPTS: ${WEBHOOK_MAXIMUM_ATTEMPTS:-8}
+    ports:
+      - "${EXAMINATION_SERVICE_PORT:-8082}:8082"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8082/actuator/health/readiness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    networks:
+      - cbt-pulse-grid
+
+  monitoring-service:
+    build:
+      context: ./monitoring-service
+    image: cbt-pulse-grid-monitoring-service:local
+    container_name: cbt-pulse-grid-monitoring-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      identity-service:
+        condition: service_healthy
+      examination-service:
+        condition: service_healthy
+    environment:
+      PORT: 8083
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-cbt_pulse_grid}
+      POSTGRES_USER: ${POSTGRES_USER:-cbt_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cbt_dev_password}
+      REST_CORS_ALLOWED_ORIGINS: ${REST_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080}
+      MONITORING_WEBSOCKET_ALLOWED_ORIGINS: ${MONITORING_WEBSOCKET_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080}
+      JWT_SECRET: ${JWT_SECRET:-cbt-pulse-grid-local-development-secret-2026}
+      JWT_ISSUER: ${JWT_ISSUER:-cbt-pulse-grid}
+      JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:-15m}
+      JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY:-7d}
+      BOOTSTRAP_ADMIN_ENABLED: ${BOOTSTRAP_ADMIN_ENABLED:-false}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@cbtpulse.local}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-Admin123!}
+      ATTEMPT_EXPIRY_SCAN_INTERVAL: ${ATTEMPT_EXPIRY_SCAN_INTERVAL:-10s}
+      ATTEMPT_EXPIRY_BATCH_SIZE: ${ATTEMPT_EXPIRY_BATCH_SIZE:-50}
+      MONITORING_HEARTBEAT_SCAN_INTERVAL: ${MONITORING_HEARTBEAT_SCAN_INTERVAL:-10s}
+      MONITORING_HEARTBEAT_TIMEOUT: ${MONITORING_HEARTBEAT_TIMEOUT:-30s}
+      MONITORING_HEARTBEAT_BATCH_SIZE: ${MONITORING_HEARTBEAT_BATCH_SIZE:-100}
+      WEBHOOK_ENABLED: ${WEBHOOK_ENABLED:-false}
+      WEBHOOK_MASTER_KEY: ${WEBHOOK_MASTER_KEY:-}
+      WEBHOOK_ALLOW_PRIVATE_HTTP: ${WEBHOOK_ALLOW_PRIVATE_HTTP:-false}
+      WEBHOOK_CONNECT_TIMEOUT: ${WEBHOOK_CONNECT_TIMEOUT:-3s}
+      WEBHOOK_RESPONSE_TIMEOUT: ${WEBHOOK_RESPONSE_TIMEOUT:-5s}
+      WEBHOOK_SCAN_INTERVAL: ${WEBHOOK_SCAN_INTERVAL:-5s}
+      WEBHOOK_LEASE_DURATION: ${WEBHOOK_LEASE_DURATION:-30s}
+      WEBHOOK_INITIAL_BACKOFF: ${WEBHOOK_INITIAL_BACKOFF:-10s}
+      WEBHOOK_MAXIMUM_BACKOFF: ${WEBHOOK_MAXIMUM_BACKOFF:-15m}
+      WEBHOOK_BATCH_SIZE: ${WEBHOOK_BATCH_SIZE:-25}
+      WEBHOOK_MAXIMUM_ATTEMPTS: ${WEBHOOK_MAXIMUM_ATTEMPTS:-8}
+    ports:
+      - "${MONITORING_SERVICE_PORT:-8083}:8083"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8083/actuator/health/readiness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    networks:
+      - cbt-pulse-grid
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    image: cbt-pulse-grid-api-gateway:local
+    container_name: cbt-pulse-grid-api-gateway
+    depends_on:
+      backend:
+        condition: service_healthy
+      identity-service:
+        condition: service_healthy
+      examination-service:
+        condition: service_healthy
+      monitoring-service:
+        condition: service_healthy
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    networks:
+      - cbt-pulse-grid
+
   frontend:
     build:
       context: ./frontend
     image: cbt-pulse-grid-frontend:local
     container_name: cbt-pulse-grid-frontend
     depends_on:
-      backend:
+      api-gateway:
         condition: service_healthy
     environment:
       VITE_API_BASE_URL: ${FRONTEND_API_BASE_URL:-}

@@ -1,0 +1,56 @@
+package com.cbtpulsegrid.backend.attempt;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+interface ExamAttemptRepository extends JpaRepository<ExamAttempt, UUID> {
+
+	Optional<ExamAttempt> findByExamIdAndCandidateId(UUID examId, UUID candidateId);
+
+	Page<ExamAttempt> findByInstitutionIdAndExamId(
+			UUID institutionId,
+			UUID examId,
+			Pageable pageable
+	);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select attempt from ExamAttempt attempt where attempt.id = :id")
+	Optional<ExamAttempt> findByIdForUpdate(@Param("id") UUID id);
+
+	@Query("""
+			select attempt.id
+			from ExamAttempt attempt
+			where attempt.status = :status
+			and attempt.expiresAt <= :now
+			order by attempt.expiresAt asc
+			""")
+	List<UUID> findExpiredIds(
+			@Param("status") AttemptStatus status,
+			@Param("now") Instant now,
+			Pageable pageable
+	);
+
+	@Query(value = """
+			select attempt.*
+			from exam_attempts attempt
+			where attempt.status = 'IN_PROGRESS'
+			and attempt.expires_at <= :now
+			order by attempt.expires_at, attempt.id
+			limit :batchSize
+			for update of attempt skip locked
+			""", nativeQuery = true)
+	List<ExamAttempt> findExpiredForUpdate(
+			@Param("now") Instant now,
+			@Param("batchSize") int batchSize
+	);
+}
