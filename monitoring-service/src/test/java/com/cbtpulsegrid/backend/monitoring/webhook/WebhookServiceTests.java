@@ -2,8 +2,11 @@ package com.cbtpulsegrid.backend.monitoring.webhook;
 
 import java.net.URI;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -20,6 +23,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -29,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -134,6 +140,32 @@ class WebhookServiceTests {
 	}
 
 	@Test
+	void listSubscriptionsWorksWhenWebhookDeliveryIsDisabled() {
+		WebhookService disabledService = new WebhookService(
+				subscriptionRepository,
+				deliveryRepository,
+				new WebhookAuthorization(),
+				urlValidator,
+				signer,
+				disabledProperties(),
+				Clock.fixed(NOW, ZoneOffset.UTC),
+				auditTrail
+		);
+		WebhookSubscription subscription = persisted(subscription(INSTITUTION_ID));
+		when(subscriptionRepository.findByInstitutionId(eq(INSTITUTION_ID), any()))
+				.thenReturn(new PageImpl<>(
+						List.of(subscription),
+						PageRequest.of(0, 5),
+						1
+				));
+
+		var response = disabledService.list(ADMIN, 0, 5);
+
+		assertEquals(1, response.content().size());
+		assertEquals(subscription.getId(), response.content().getFirst().id());
+	}
+
+	@Test
 	void rejectsDuplicateSubscriptionNames() {
 		when(subscriptionRepository.existsByInstitutionIdAndNameIgnoreCase(
 				INSTITUTION_ID,
@@ -204,5 +236,24 @@ class WebhookServiceTests {
 		);
 		ReflectionTestUtils.setField(delivery, "id", UUID.randomUUID());
 		return delivery;
+	}
+
+	private static WebhookProperties disabledProperties() {
+		return new WebhookProperties(
+				false,
+				Base64.getEncoder().encodeToString(
+						"0123456789abcdef0123456789abcdef"
+								.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+				),
+				false,
+				Duration.ofSeconds(3),
+				Duration.ofSeconds(5),
+				Duration.ofSeconds(5),
+				Duration.ofSeconds(30),
+				Duration.ofSeconds(10),
+				Duration.ofMinutes(15),
+				25,
+				8
+		);
 	}
 }

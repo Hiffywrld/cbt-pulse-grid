@@ -59,6 +59,23 @@ describe('UsersPage tenant and role presentation', () => {
     expect(screen.getByRole('dialog', { name: 'Suspend account?' })).toBeVisible()
   })
 
+  it('disables self-suspension for the current authenticated account', async () => {
+    const currentUserPage = { ...page, content: [{ ...page.content[0], id: 'admin-1', firstName: 'Amina', lastName: 'Okafor', email: 'admin@example.edu', roles: ['INSTITUTION_ADMIN'] as const, registrationNumber: null }] }
+    const statusMutation = { mutateAsync: vi.fn(), isPending: false }
+    vi.mocked(useAuth).mockReturnValue({ status: 'authenticated', user: { id: 'admin-1', email: 'admin@example.edu', institutionId: 'institution-1', roles: ['INSTITUTION_ADMIN'] }, login: vi.fn(), logout: vi.fn() })
+    vi.mocked(useInstitutions).mockReturnValue({ data: undefined } as ReturnType<typeof useInstitutions>)
+    vi.mocked(useUsers).mockReturnValue({ isPending: false, isError: false, data: currentUserPage } as unknown as ReturnType<typeof useUsers>)
+    vi.mocked(useUserMutations).mockReturnValue({ create: { mutateAsync: vi.fn() }, update: { mutateAsync: vi.fn() }, status: statusMutation } as unknown as ReturnType<typeof useUserMutations>)
+    render(<UsersPage mode="institution" />)
+
+    const suspend = screen.getByRole('button', { name: 'Suspend Amina Okafor: You cannot suspend your own account.' })
+    expect(suspend).toBeDisabled()
+    await userEvent.click(suspend)
+
+    expect(screen.queryByRole('dialog', { name: 'Suspend account?' })).not.toBeInTheDocument()
+    expect(statusMutation.mutateAsync).not.toHaveBeenCalled()
+  })
+
   it('shows student registration numbers and no tenant selector to institution staff', () => {
     vi.mocked(useAuth).mockReturnValue({ status: 'authenticated', user: { id: 'admin-1', email: 'admin@example.edu', institutionId: 'institution-1', roles: ['INSTITUTION_ADMIN'] }, login: vi.fn(), logout: vi.fn() })
     vi.mocked(useInstitutions).mockReturnValue({ data: undefined } as ReturnType<typeof useInstitutions>)

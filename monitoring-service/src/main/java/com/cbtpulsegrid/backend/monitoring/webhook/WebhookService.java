@@ -100,7 +100,6 @@ public class WebhookService {
 			int page,
 			int size
 	) {
-		requireEnabled();
 		UUID institutionId = authorization.requireInstitutionAdministrator(actor);
 		validatePage(page, size);
 		Page<WebhookSubscriptionResponse> subscriptions = subscriptionRepository.findByInstitutionId(
@@ -116,7 +115,6 @@ public class WebhookService {
 
 	@Transactional(readOnly = true)
 	public WebhookSubscriptionResponse get(MonitoringActor actor, UUID id) {
-		requireEnabled();
 		UUID institutionId = authorization.requireInstitutionAdministrator(actor);
 		return toResponse(subscriptionRepository.findByInstitutionIdAndId(institutionId, id)
 				.orElseThrow(() -> new NoSuchElementException("Webhook subscription not found")));
@@ -169,7 +167,6 @@ public class WebhookService {
 			int page,
 			int size
 	) {
-		requireEnabled();
 		UUID institutionId = authorization.requireInstitutionAdministrator(actor);
 		validatePage(page, size);
 		PageRequest pageable = PageRequest.of(

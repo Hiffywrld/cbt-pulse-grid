@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import com.cbtpulsegrid.backend.audit.AuditAction;
 import com.cbtpulsegrid.backend.audit.AuditResourceType;
 import com.cbtpulsegrid.backend.audit.AuditTrail;
+import com.cbtpulsegrid.backend.identity.ApiConflictException;
 import com.cbtpulsegrid.backend.identity.Role;
 import com.cbtpulsegrid.backend.identity.User;
 import com.cbtpulsegrid.backend.identity.UserRepository;
@@ -162,6 +163,9 @@ public class UserAccountService {
 	) {
 		User user = findUser(id);
 		assertCanAccess(actor, user);
+		if (actor.userId().equals(user.getId()) && status != UserStatus.ACTIVE) {
+			throw new ApiConflictException("You cannot suspend your own account.");
+		}
 		user.setStatus(status);
 		User saved = userRepository.saveAndFlush(user);
 		auditTrail.record(

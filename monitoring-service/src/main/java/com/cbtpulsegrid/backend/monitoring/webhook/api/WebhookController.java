@@ -15,7 +15,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,7 +34,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/webhooks")
 @PreAuthorize("hasRole('INSTITUTION_ADMIN')")
-@ConditionalOnProperty(name = "app.webhooks.enabled", havingValue = "true")
 @Tag(name = "Webhooks", description = "Tenant-secured anti-cheat webhook subscriptions and delivery history")
 @SecurityRequirement(name = "bearerAuth")
 public class WebhookController {

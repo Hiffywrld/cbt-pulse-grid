@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -85,6 +86,54 @@ class UserAccountControllerAuthorizationTests {
 		when(userAccountService.get(any(ActorContext.class), eq(userId))).thenReturn(expected);
 
 		assertSame(expected, userAccountController.get(jwt, userId));
+	}
+
+	@Test
+	@WithMockUser(roles = "INSTITUTION_ADMIN")
+	void statusChangesUseAuthenticatedPrincipalAsActor() {
+		UUID actorId = UUID.randomUUID();
+		UUID institutionId = UUID.randomUUID();
+		Instant now = Instant.now();
+		Jwt jwt = Jwt.withTokenValue("token")
+				.header("alg", "HS256")
+				.subject(actorId.toString())
+				.issuedAt(now)
+				.expiresAt(now.plusSeconds(60))
+				.claim("institutionId", institutionId.toString())
+				.claim("roles", List.of("INSTITUTION_ADMIN"))
+				.build();
+		UserResponse expected = new UserResponse(
+				actorId,
+				"Admin",
+				"User",
+				"admin@one.edu",
+				institutionId,
+				Set.of(Role.INSTITUTION_ADMIN),
+				null,
+				UserStatus.ACTIVE,
+				now,
+				now,
+				0
+		);
+		when(userAccountService.changeStatus(
+				any(ActorContext.class),
+				eq(actorId),
+				eq(UserStatus.INACTIVE)
+		)).thenReturn(expected);
+
+		assertSame(
+				expected,
+				userAccountController.changeStatus(
+						jwt,
+						actorId,
+						new ChangeUserStatusRequest(UserStatus.INACTIVE)
+				)
+		);
+		verify(userAccountService).changeStatus(
+				eq(new ActorContext(actorId, institutionId, Set.of(Role.INSTITUTION_ADMIN))),
+				eq(actorId),
+				eq(UserStatus.INACTIVE)
+		);
 	}
 
 	@Configuration(proxyBeanMethods = false)

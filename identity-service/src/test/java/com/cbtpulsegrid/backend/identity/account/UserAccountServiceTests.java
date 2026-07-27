@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.cbtpulsegrid.backend.audit.AuditTrail;
+import com.cbtpulsegrid.backend.identity.ApiConflictException;
 import com.cbtpulsegrid.backend.identity.Role;
 import com.cbtpulsegrid.backend.identity.User;
 import com.cbtpulsegrid.backend.identity.UserRepository;
@@ -220,6 +221,72 @@ class UserAccountServiceTests {
 		);
 	}
 
+	@Test
+	void institutionAdminCannotSuspendThemselves() {
+		UUID actorId = UUID.randomUUID();
+		User user = user(actorId, INSTITUTION_ID, UserStatus.ACTIVE, Role.INSTITUTION_ADMIN);
+		when(userRepository.findById(actorId)).thenReturn(Optional.of(user));
+
+		ApiConflictException exception = assertThrows(
+				ApiConflictException.class,
+				() -> userAccountService.changeStatus(
+						institutionAdmin(actorId, INSTITUTION_ID),
+						actorId,
+						UserStatus.INACTIVE
+				)
+		);
+
+		assertEquals("You cannot suspend your own account.", exception.getMessage());
+		verify(userRepository, never()).saveAndFlush(any());
+	}
+
+	@Test
+	void superAdminCannotSuspendThemselves() {
+		UUID actorId = UUID.randomUUID();
+		User user = user(actorId, null, UserStatus.ACTIVE, Role.SUPER_ADMIN);
+		when(userRepository.findById(actorId)).thenReturn(Optional.of(user));
+
+		assertThrows(
+				ApiConflictException.class,
+				() -> userAccountService.changeStatus(superAdmin(actorId), actorId, UserStatus.INACTIVE)
+		);
+		verify(userRepository, never()).saveAndFlush(any());
+	}
+
+	@Test
+	void authorizedAdminCanSuspendAnotherEligibleUser() {
+		UUID targetId = UUID.randomUUID();
+		User user = user(targetId, INSTITUTION_ID, UserStatus.ACTIVE, Role.STUDENT);
+		when(userRepository.findById(targetId)).thenReturn(Optional.of(user));
+		when(userRepository.saveAndFlush(user)).thenReturn(user);
+
+		UserResponse response = userAccountService.changeStatus(
+				institutionAdmin(INSTITUTION_ID),
+				targetId,
+				UserStatus.INACTIVE
+		);
+
+		assertEquals(UserStatus.INACTIVE, response.status());
+		verify(userRepository).saveAndFlush(user);
+	}
+
+	@Test
+	void crossTenantSuspensionRemainsForbidden() {
+		UUID targetId = UUID.randomUUID();
+		User user = user(targetId, OTHER_INSTITUTION_ID, UserStatus.ACTIVE, Role.STUDENT);
+		when(userRepository.findById(targetId)).thenReturn(Optional.of(user));
+
+		assertThrows(
+				AccessDeniedException.class,
+				() -> userAccountService.changeStatus(
+						institutionAdmin(INSTITUTION_ID),
+						targetId,
+						UserStatus.INACTIVE
+				)
+		);
+		verify(userRepository, never()).saveAndFlush(any());
+	}
+
 	private static CreateUserRequest studentRequest(UUID institutionId, String email, String registrationNumber) {
 		return new CreateUserRequest(
 				"Student",
@@ -236,7 +303,23 @@ class UserAccountServiceTests {
 		return new ActorContext(UUID.randomUUID(), null, Set.of(Role.SUPER_ADMIN));
 	}
 
+	private static ActorContext superAdmin(UUID userId) {
+		return new ActorContext(userId, null, Set.of(Role.SUPER_ADMIN));
+	}
+
 	private static ActorContext institutionAdmin(UUID institutionId) {
 		return new ActorContext(UUID.randomUUID(), institutionId, Set.of(Role.INSTITUTION_ADMIN));
+	}
+
+	private static ActorContext institutionAdmin(UUID userId, UUID institutionId) {
+		return new ActorContext(userId, institutionId, Set.of(Role.INSTITUTION_ADMIN));
+	}
+
+	private static User user(UUID id, UUID institutionId, UserStatus status, Role role) {
+		User user = new User("Test", "User", id + "@example.edu", "hash", status);
+		user.setInstitutionId(institutionId);
+		user.getRoles().add(role);
+		org.springframework.test.util.ReflectionTestUtils.setField(user, "id", id);
+		return user;
 	}
 }
